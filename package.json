@@ -1,0 +1,29 @@
+{
+  "name": "siseveebi-assistent",
+  "displayName": "Siseveebi assistent",
+  "version": "0.0.1",
+  "description": "# Siseveebi assistent õpetajatele",
+  "author": " Kui päevik avada, peaks ilmuma teade, milles on loend puuduvatest tundidest ja nupp, mille vajutamisel saab puuduvad tunnid päevikusse lisada.",
+  "scripts": {
+    "dev": "plasmo dev",
+    "build": "plasmo build",
+    "package": "plasmo package"
+  },
+  "dependencies": {
+    "plasmo": "^0.73.7",
+    "svelte": "^3.59.1",
+    "svelte-preprocess": "^5.0.4"
+  },
+  "devDependencies": {
+    "@plasmohq/prettier-plugin-sort-imports": "^3.6.4",
+    "@types/chrome": "^0.0.237",
+    "@types/node": "^20.2.4",
+    "prettier": "^2.8.8",
+    "typescript": "^5.0.4"
+  },
+  "manifest": {
+    "host_permissions": [
+      "https://*/*"
+    ]
+  }
+}
