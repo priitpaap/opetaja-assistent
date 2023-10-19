@@ -1,9 +1,11 @@
-# Siseveebi assistent õpetajatele
+# Õpetaja assistent
 
 Pivotal Tracker: [https://www.pivotaltracker.com/n/projects/2645015](https://www.pivotaltracker.com/n/projects/2645015)
 
 ## Eesmärk
-Siseveebi assistent on Chrome'i laiendus, mis aitab õpetajatel Siseveebis päevikuid kontrollida ja automaatselt täita.
+„Õpetaja assistent“ on Chrome'i laiendus, mis on loodud selleks, et aidata õpetajatel õppeinfosüsteemis rühmade päevikuid kontrollida ja nendes esinevaid puudujääke, nagu puuduolevad tunnid või määramata lõpphinded, automaatselt kõrvaldada. Laiendus tuvastab ja tõstab esile puuduolevad tunnid ja hinded, andes ühtlasi ülevaate ainete lõpetamise staatusest ja paljust muust. See on mõeldud olema tõhus vahend õpetajatele, muutes nende töö lihtsamaks ja korraldatumaks.
+
+Hetkel on toetatud tahvel.edu.ee, kuid Siseveebi tugi on ka plaanis luua kunagi, kui keegi soovib seda.
 
 ## Paigaldamine
 Järgi neid samme assistendi paigaldamiseks:
@@ -13,7 +15,7 @@ Järgi neid samme assistendi paigaldamiseks:
 3. Lülita sisse arendaja režiim (Developer Mode)
 4. Klõpsa Chrome'i laienduste halduris nuppu `Load unpacked` (avaneb kausta valimise dialoog)
 5. Vali kaustaks `build/chrome-mv3-prod` kaust
-6. Külasta Siseveebi päevikute loendi vaadet (peaksid nägema, et lehel on midagi muutunud)
+6. Külasta oma õppeinfosüsteemi päevikute loendi vaadet (peaksid nägema, et lehel on midagi muutunud)
 
 ## Võimalused:
 
@@ -62,7 +64,7 @@ pnpm dev
 Arendusversioon tekib kausta `build/chrome-mv3-dev`. Sellest kaustast saab laadida Chrome'i laienduse sama moodi nagu tootmisversiooni puhul:
 1. Klõpsa Chrome'i laienduste halduris nuppu `Load unpacked` (avaneb kausta valimise dialoog)
 2. Vali kaustaks `build/chrome-mv3-dev` kaust
-3. Külasta Siseveebi päevikute loendi vaadet
+3. Külasta oma õppeinfosüsteemi päevikute loendi vaadet
 
 ### Panustamine
 Kui oled midagi vahvat teinud, ära unusta seda ka teistega jagamast!
