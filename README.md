@@ -87,7 +87,7 @@ Järgnev tabel näitab, millised funktsioonid on juba olemas ja millised on alle
   </tr>
   <tr>
     <td>Õpetajana saab lisada päevikusse sissekandmata tunnid kahe klikiga, et säästa aega ja vähendada vigu</td>
-    <td></td>
+    <td align="center">✅</td>
     <td></td>
   </tr>
   <tr>
