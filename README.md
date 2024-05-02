@@ -77,7 +77,7 @@ Järgnev tabel näitab, millised funktsioonid on juba olemas ja millised on alle
   </tr>
   <tr>
     <td>Õpetaja näeb tabelina, millised tunnid on sisse kandmata jäänud</td>
-    <td></td>
+    <td align="center">✅</td>
     <td></td>
   </tr>
   <tr>
