@@ -82,7 +82,7 @@ Järgnev tabel näitab, millised funktsioonid on juba olemas ja millised on alle
   </tr>
   <tr>
     <td>Õpetaja näeb tabelist, millised tunnid on vigaselt sisse kantud</td>
-    <td></td>
+    <td align="center">✅</td>
     <td></td>
   </tr>
   <tr>
