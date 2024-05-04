@@ -92,7 +92,7 @@ Järgnev tabel näitab, millised funktsioonid on juba olemas ja millised on alle
   </tr>
   <tr>
     <td>Õpetaja näeb tabelina, millised hinded on väljapanemata jäänud, kui aine kõik tunnid on tunniplaani kantud</td>
-    <td></td>
+    <td align="center">✅</td>
     <td></td>
   </tr>
   <tr>
