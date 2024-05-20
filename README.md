@@ -37,12 +37,17 @@ Järgnev tabel näitab, millised funktsioonid on juba olemas ja millised on alle
     <td colspan="3"><br><h3>Päevikute loetelu vaade</h3></td>
   </tr>
   <tr>
-    <td>Õpetaja näeb erinevat värvi hoiatusmärke, kui päevikus esineb puuduvaid või ebakõlalisi sissekandeid</td>
+    <td>Õpetaja näeb halli hoiatusmärki, kui päevikus esineb ebakõlalisi sissekandeid</td>
     <td align="center">✅</td>
     <td></td>
   </tr>
   <tr>
-    <td>Õpetaja näeb hoiatust, kui kõik selle aine tunnid on tunniplaani lisatud ja päevikus puuduvad mõned hinded</td>
+    <td>Õpetaja näeb kollast hoiatusmärki, kui päevikus esineb puuduvaid sissekandeid</td>
+    <td align="center">✅</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>Õpetaja näeb punast hoiatusmärki, kui päevikus on puuduvaid hindeid, kui kõik aine tunnid on tunniplaani kantud</td>
     <td align="center">✅</td>
     <td></td>
   </tr>
