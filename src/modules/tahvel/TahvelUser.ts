@@ -9,6 +9,11 @@ class TahvelUser {
 
         const user = await Api.get(`/user`);
 
+        // If the response object is an empty object, the user is not logged in
+        if (!user || Object.keys(user).length === 0) {
+            return
+        }
+
         // Check schoolId
         if (!user.school.id) {
             throw new Error("School ID not found");

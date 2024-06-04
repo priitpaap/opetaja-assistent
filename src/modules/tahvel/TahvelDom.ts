@@ -1,4 +1,5 @@
 import AssistentDom from "~src/shared/AssistentDom";
+import {AssistentDetailedError} from "~src/shared/AssistentDetailedError";
 
 class TahvelDom {
     static createExclamationMark(id: string, color: string, innerHTML: string, title: string): HTMLSpanElement {
@@ -40,10 +41,9 @@ class TahvelDom {
 
         // Find the select element using the model name
         const mdSelectSelector = `md-select[ng-model="${model}"]`;
-        const selectElement = await AssistentDom.waitForElementToBeVisible(mdSelectSelector) as HTMLSelectElement
+        const selectElement = await AssistentDom.waitForElement(mdSelectSelector) as HTMLSelectElement
         if (!selectElement) {
-            console.error("Select `${mdSelectSelector}` not found.");
-            return;
+            throw new AssistentDetailedError(500, 'Element not found', 'Element ' + mdSelectSelector + ' not found.');
         }
 
         // Click the dropdown to open it
@@ -55,18 +55,16 @@ class TahvelDom {
 
         const mdContentId = await AssistentDom.waitForAttributeToAppear(selectElement, 'aria-owns');
         const mdContentSelector = `md-content[id="${mdContentId}"]`
-        const mdContentElement = await AssistentDom.waitForElementToBeVisible(mdContentSelector) as HTMLElement;
+        const mdContentElement = await AssistentDom.waitForElement(mdContentSelector) as HTMLElement;
         if (!mdContentElement) {
-            console.error('Element ' + mdContentSelector + ' not found.');
-            return;
+            throw new AssistentDetailedError(500, 'Element not found', 'Element ' + mdContentSelector + ' not found.');
         }
 
         // Find and option element with the desired value
         const mdOptionSelector = `${mdContentSelector} md-option[value="${value}"]`;
         const optionElement = await AssistentDom.waitForElement(mdOptionSelector) as HTMLElement;
         if (!optionElement) {
-            console.error('Option element ' + mdOptionSelector + ' not found.');
-            return;
+            throw new AssistentDetailedError(500, 'Element not found', 'Option element ' + mdOptionSelector + ' not found.');
         }
 
         // Make the right option background green
@@ -90,12 +88,11 @@ class TahvelDom {
 
     }
 
-    static async fillTextbox(inputNameLessons: string, value: string): Promise<void> {
-        const inputElement = await AssistentDom.waitForElementToBeVisible(`input[name="${inputNameLessons}"]`) as HTMLInputElement;
-        if (!inputElement) {
-            console.error(`Input element not found for name ${inputNameLessons}.`);
-            return;
-        }
+    static async fillTextbox(selector: string, value: string, makeTheBorderGreen = true): Promise<void> {
+
+        const inputElement = await AssistentDom.waitForElementToBeVisible(selector) as HTMLInputElement;
+        if (!inputElement) throw new Error('Textbox ' + selector + ' not found.');
+
         inputElement.value = value.toString();
 
         // Dispatch an input event to notify AngularJS of the input value change
@@ -103,7 +100,9 @@ class TahvelDom {
         inputElement.dispatchEvent(inputEvent);
 
         // Make the input border green
-        inputElement.style.border = '2px solid #40ff6d';
+        if (makeTheBorderGreen) {
+            inputElement.style.border = '2px solid #40ff6d';
+        }
 
     }
 
@@ -117,8 +116,7 @@ class TahvelDom {
                 element.click();
                 if (clickCallback) clickCallback();
             } else {
-                console.error(elementOrSelector);
-                console.error('...element not found');
+                throw new AssistentDetailedError(500, 'Element not found', 'Element ' + elementOrSelector + ' not found.');
             }
         })
 

@@ -5,11 +5,14 @@ import TahvelStudyYear from "./TahvelStudyYear";
 import TahvelTimetable from "~src/modules/tahvel/TahvelTimetable";
 import TahvelJournal from "~src/modules/tahvel/TahvelJournal";
 import TahvelJournalList from "~src/modules/tahvel/TahvelJournalList";
+import TahvelJournalEntryDialog from "~src/modules/tahvel/TahvelJournalEntryDialog";
 import TahvelUser from "~src/modules/tahvel/TahvelUser";
 import AssistentDom from "~src/shared/AssistentDom";
 import TahvelStudents from "~src/modules/tahvel/TahvelStudents";
 import {apiAssessmentEntry, type apiJournalInfoEntry} from "~src/modules/tahvel/TahvelTypes";
 import {AssistentGradingType} from "~src/shared/AssistentTypes";
+import {AssistentDetailedError} from "~src/shared/AssistentDetailedError";
+import {AssistentApiError} from "~src/shared/AssistentApiError";
 
 const urlForJournalsList = '/#/journals(\\?_menu)?';
 const urlForJournalEdit = '#/journal/\\d+/edit';
@@ -43,28 +46,45 @@ class Tahvel {
     /** Sets up API URL, fetches data, fills the cache with data, and enhances SPA navigation */
     static async init(): Promise<void> {
 
-        try {
+        // Inject custom styles
+        Tahvel.addCustomStyles();
 
-            // Set the base URL for the API
-            Api.url = Api.extractBaseUrl() + "hois_back";
+        // Initialize customizations (try-catch doesn't work with promises, so we need to catch errors explicitly)
+        TahvelJournalEntryDialog.initCustomizations().catch(error => Tahvel.handleError(error));
 
-            // Fetch data
-            await TahvelUser.init();
-            await TahvelStudyYear.init();
-            AssistentCache.lessonTimes = TahvelLessonTimes[TahvelUser.schoolId];
+        // Set the base URL for the API
+        Api.url = Api.extractBaseUrl() + "hois_back";
 
-            // Fill the cache with data
-            await Tahvel.refreshCache();
+        // Fetch data
+        await TahvelUser.init();
 
-            // Inject custom styles
-            Tahvel.addCustomStyles();
-
-            Tahvel.enhanceSPAHistoryNavigation();
-
-        } catch (error) {
-            console.error('Error in Tahvel.init:', error);
+        // Check if the user is logged in
+        if (!TahvelUser.schoolId) {
+            return;
         }
 
+        await TahvelStudyYear.init();
+        AssistentCache.lessonTimes = TahvelLessonTimes[TahvelUser.schoolId];
+
+        // Fill the cache with data
+        await Tahvel.refreshCache();
+
+        Tahvel.enhanceSPAHistoryNavigation();
+
+    }
+
+    static handleError(error: Error): void {
+        console.error(error)
+
+        if(error instanceof AssistentApiError) {
+            AssistentDom.showErrorMessage('HTTP päring veebiteenusele lõppes õnnetult:', error.message, error.statusCode);
+            return;
+        }
+        if (error instanceof AssistentDetailedError) {
+            AssistentDom.showErrorMessage(error.title, error.message, error.code);
+        } else {
+            AssistentDom.showErrorMessage('Error', error.message, 500);
+        }
     }
 
     /** Replaces the default history navigation with a custom one to execute actions based on the URL */
@@ -76,19 +96,19 @@ class Tahvel {
             // Do stuff when the user navigates to a new page
             history.pushState = function (...args) {
                 originalPushState.apply(this, args);
-                Tahvel.executeActionsBasedOnURL()
+                Tahvel.executeActionsBasedOnURL().catch(error => Tahvel.handleError(error));
             };
 
             // Do stuff when the user navigates back
             window.addEventListener('popstate', () => {
-                Tahvel.executeActionsBasedOnURL();
+                Tahvel.executeActionsBasedOnURL().catch(error => Tahvel.handleError(error));
             });
 
             // Execute actions based on the initial URL
-            Tahvel.executeActionsBasedOnURL();
+            Tahvel.executeActionsBasedOnURL().catch(error => Tahvel.handleError(error));
 
         } catch (error) {
-            console.error('Error in Tahvel.enhanceSPAHistoryNavigation:', error);
+            Tahvel.handleError(error)
         }
     }
 
@@ -109,80 +129,79 @@ class Tahvel {
                 actionConfig.action();
             }
         } catch (error) {
-            console.error('Error in Tahvel.executeActionsBasedOnURL:', error);
+            Tahvel.handleError(error)
         }
     }
 
     /** Fetches the timetable entries and fills the cache with them */
     private static async refreshCache() {
 
-        try {
-            // Fetch the timetable events
-            const timetableEntries = await TahvelTimetable.fetchEntries();
+        // Fetch the timetable events
+        const timetableEntries = await TahvelTimetable.fetchEntries();
 
-            // Iterate over the events and add them to the cache
-            for (const entry of timetableEntries) {
+        // Iterate over the events and add them to the cache
+        for (const entry of timetableEntries) {
 
-                // Create new journal if it doesn't exist
-                if (!AssistentCache.getJournal(entry.journalId)) {
+            // Create new journal if it doesn't exist
+            if (!AssistentCache.getJournal(entry.journalId)) {
 
-                    // Create a new journal object and add it to the cache
-                    AssistentCache.journals.push({
-                        id: entry.journalId,
-                        name: entry.name,
-                        entriesInJournal: [],
-                        entriesInTimetable: [],
-                        differencesToTimetable: [],
-                        students: [],
-                        learningOutcomes: [],
-                        missingGrades: [],
-                        contactLessonsPlanned: null,
-                        independentWorkPlanned: null,
-                        contactLessonsGiven: null,
-                        independentWorkGiven: null,
-                        gradingType: null,
-                        lessonMissing: false,
-                        lessonDiscrepancies: false
-                    });
-                }
-
-                // Find the journal and add the entry to it
-                AssistentCache.getJournal(entry.journalId).entriesInTimetable.push(entry);
+                // Create a new journal object and add it to the cache
+                AssistentCache.journals.push({
+                    id: entry.journalId,
+                    name: entry.name,
+                    entriesInJournal: [],
+                    entriesInTimetable: [],
+                    differencesToTimetable: [],
+                    students: [],
+                    learningOutcomes: [],
+                    missingGrades: [],
+                    contactLessonsPlanned: null,
+                    independentWorkPlanned: null,
+                    contactLessonsGiven: null,
+                    independentWorkGiven: null,
+                    gradingType: null,
+                    lessonMissing: false,
+                    lessonDiscrepancies: false
+                });
             }
 
-            // Iterate over the journals and fill entriesInJournal
-            for (const journal of AssistentCache.journals) {
-                // Add journal entries to the journal object
-                journal.entriesInJournal = await TahvelJournal.fetchEntries(journal.id);
-                journal.students = await TahvelStudents.fetchEntries(journal.id);
-                journal.learningOutcomes = await TahvelJournal.fetchLearningOutcomes(journal.id);
-                try {
-                    const response: apiJournalInfoEntry = await Api.get(`/journals/${journal.id}`);
-
-                    if (!response) {
-                        console.error("Error: Journal entries data is missing or in unexpected format");
-                        return;
-                    }
-
-                    journal.contactLessonsPlanned = response.lessonHours.capacityHours.find(capacity => capacity.capacity === "MAHT_a")?.plannedHours || 0;
-                    journal.independentWorkPlanned = response.lessonHours.capacityHours.find(capacity => capacity.capacity === "MAHT_i")?.plannedHours || 0;
-                    journal.contactLessonsGiven = response.lessonHours.capacityHours.find(capacity => capacity.capacity === "MAHT_a")?.usedHours || 0;
-                    journal.independentWorkGiven = response.lessonHours.capacityHours.find(capacity => capacity.capacity === "MAHT_i")?.usedHours || 0;
-                    journal.gradingType = response.assessment === apiAssessmentEntry.numeric ? AssistentGradingType.numeric : AssistentGradingType.passFail;
-                } catch (error) {
-                    console.error("Error fetching journal info:", error);
-                    throw error; // Rethrow error for upper layers to handle
-                }
-
-                // Find discrepancies for this journal
-                AssistentCache.findJournalDiscrepancies(journal.id)
-                AssistentCache.findCurriculumModuleOutcomeDiscrepancies(journal.id)
-                AssistentCache.findJournalLessonsDifferencesFact(journal.id)
-
-            }
-        } catch (error) {
-            console.error('Error in Tahvel.refreshCache:', error);
+            // Find the journal and add the entry to it
+            AssistentCache.getJournal(entry.journalId).entriesInTimetable.push(entry);
         }
+
+        // Iterate over the journals and fill entriesInJournal
+        for (const journal of AssistentCache.journals) {
+            // Add journal entries to the journal object
+            journal.entriesInJournal = await TahvelJournal.fetchEntries(journal.id);
+            journal.students = await TahvelStudents.fetchEntries(journal.id);
+            journal.learningOutcomes = await TahvelJournal.fetchLearningOutcomes(journal.id);
+
+            let response: apiJournalInfoEntry;
+            try {
+                response = await Api.get(`/journals/${journal.id}`);
+            } catch (e) {
+                if (e.statusCode === 412) {
+                    continue;
+                }
+            }
+
+            if (!response) {
+                throw new AssistentDetailedError(500, 'Error', 'Journal entries data is missing or in unexpected format');
+            }
+
+            journal.contactLessonsPlanned = response.lessonHours.capacityHours.find(capacity => capacity.capacity === "MAHT_a")?.plannedHours || 0;
+            journal.independentWorkPlanned = response.lessonHours.capacityHours.find(capacity => capacity.capacity === "MAHT_i")?.plannedHours || 0;
+            journal.contactLessonsGiven = response.lessonHours.capacityHours.find(capacity => capacity.capacity === "MAHT_a")?.usedHours || 0;
+            journal.independentWorkGiven = response.lessonHours.capacityHours.find(capacity => capacity.capacity === "MAHT_i")?.usedHours || 0;
+            journal.gradingType = response.assessment === apiAssessmentEntry.numeric ? AssistentGradingType.numeric : AssistentGradingType.passFail;
+
+            // Find discrepancies for this journal
+            AssistentCache.findJournalDiscrepancies(journal.id)
+            AssistentCache.findCurriculumModuleOutcomeDiscrepancies(journal.id)
+            AssistentCache.findJournalLessonsDifferencesFact(journal.id)
+
+        }
+
     }
 
     /** Injects additional styles for the extension to the DOM */
@@ -250,6 +269,96 @@ class Tahvel {
                     margin-top: 20px; 
                     margin-left: 18px;
                 }
+
+                #assistent-learning-outcomes-dropdown {
+                    width: 100%;
+                    height: 100%;
+                    border: none;
+                    background-color: transparent;
+                    font-size: 13px;
+                    color: #333;
+                }
+                
+                #assistent-learning-outcomes-dropdown > div.ss-main {
+                    font-size: 13px;
+                    color: red !important;
+                    background-color: #f5f5f5;
+                    min-height: 50px;
+                    border: 0;
+                    border-bottom: 1px solid #d7d7d7;
+                    border-radius: 0;
+                }
+                
+                .ss-content .ss-list .ss-option {
+                    font-size: 13px;                
+                }
+                
+
+                #assistent-learning-outcomes-dropdown > div.ss-main > div.ss-values > div.ss-placeholder {
+                    font-size: 13px;
+                    color: rgba(255, 64, 129, 0.87);
+                }
+                
+                #assistent-learning-outcomes-dropdown > div.ss-main > div.ss-values > div.ss-value {
+                    padding: 5px;
+                    margin: 0;
+                    background-color: rgba(255, 64, 129, 0.87);
+                }
+                
+                .assistent-message-box {
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background-color: white;
+                    padding: 0;
+                    
+                    z-index: 1000;
+                    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+                    border-radius: 5px;
+                    min-width: 300px;
+                    border: 1px solid red;
+                    
+                }
+                
+                .assistent-message-box-title {
+                    font-weight: bold;
+                    font-size: 18px;
+                    margin-bottom: 10px;
+                    color: white;
+                    background-color: red;
+                    padding: 10px;
+                }
+                
+                
+                .assistent-message-box-message {
+                    margin-bottom: 10px;
+                    padding: 10px;
+                    padding-bottom: 40px;
+                }
+                
+                .assistent-message-box-close-button {
+                    background-color: #f5f5f5;
+                    border: 1px solid #ccc;
+                    padding: 5px 10px;
+                    cursor: pointer;
+                    right: 10px;
+                    position: absolute;
+                    bottom: 10px;
+                }
+                
+                .assistent-message-box-close-button:hover {
+                    background-color: #e5e5e5;
+                }
+                
+                .assistent-message-box-close-button:active {
+                    background-color: #d5d5d5;
+                }
+                
+                .assistent-message-box-close-button:focus {
+                    outline: none;
+                }
+                
             </style>`));
     }
 }
