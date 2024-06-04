@@ -25,7 +25,7 @@ class TahvelJournal {
 
         } catch (e) {
 
-            // If 412 then we don't have permission to read this particular journal and we should just skip it
+            // If 412 then we don't have permission to read this particular journal, and we should just skip it
             if (e.statusCode === 412) {
                 return [];
             }
@@ -78,7 +78,6 @@ class TahvelJournal {
         const journal = AssistentCache.getJournal(journalId)
         if (!journal) {
             throw new AssistentDetailedError(500, 'Error', 'Journal data not found in cache');
-            return null;
         }
 
         return journal;
@@ -172,14 +171,17 @@ class TahvelJournal {
         const journal = await TahvelJournal.getJournalWithValidation();
         if (!journal || journal.missingGrades.length === 0 || journal.contactLessonsPlanned > journal.entriesInTimetable.length) return;
 
+        const gradingType = journal.gradingType;
+        const isNumeric = gradingType === "numeric";
         const missingGradesTable = AssistentDom.createStructure(`
             <div id="assistent-grades-table-container">
                 <table id="assistent-grades-table" class="assistent-table">
                     <caption>Puuduvad hinded</caption>
                     <thead>
                         <tr>
-                            <th rowspan="2">Õpiväljund</th>
+                            <th>Õpiväljund</th>
                             <th>Hindeta õpilased</th>
+                            <th>Tegevus</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -187,14 +189,159 @@ class TahvelJournal {
                             <tr>
                                 <td class="align-left">${name}</td>
                                 <td class="align-left">${studentList.map(({name}) => name).join(', ')}</td>
+                                <td><button class="md-raised md-button md-ink-ripple md-primary">${studentList.length > 1 ? 'Lisa hindeid' : 'Lisa hinne'}</button></td>
                             </tr>
                         `).join('')}
+                        <tr>
+                            <td colspan="3" class="align-left">
+                                <input type="radio" id="passFail" name="grading" value="Mitteeristav hindamine" ${!isNumeric ? 'checked' : ''}>
+                                <label for="passFail">Mitteeristav hindamine${!isNumeric ? ' (vaikimisi)' : ''}</label>
+                                <br>
+                                <input type="radio" id="numeric" name="grading" value="Eristav hindamine" ${isNumeric ? 'checked' : ''}>
+                                <label for="numeric">Eristav hindamine${isNumeric ? ' (vaikimisi)' : ''}</label>
+                                <br>
+                            </td>
+                        </tr>
                     </tbody>
                 </table>
             </div>`);
 
+
         journalHeaderElement.before(missingGradesTable);
 
+        // Mark that missing grades table has been injected
+        document.querySelectorAll('#assistent-grades-table button.md-primary').forEach((button, index) => {
+            button.addEventListener('click', async () => {
+
+                TahvelJournal.setGradeInputAsSelectToFalse();
+                const gradingType = document.querySelector('input[name="grading"]:checked').id;
+
+                TahvelJournal.clickQuickUpdate(`${journal.missingGrades[index].code}`);
+
+                for (const student of journal.missingGrades[index].studentList) {
+                    try {
+                        const grade = TahvelJournal.calculateGrade(gradingType);
+
+                        TahvelJournal.setGradeForStudent(student.studentId, grade);
+                        TahvelJournal.setDateForStudentGrade(student.studentId, new Date());
+
+                        if (grade < 3 || grade === "MA") {
+                            TahvelJournal.setCommentForStudentGrade(student.studentId, "Grade was negative due to...");
+                        }
+                    } catch (error) {
+                        console.error(`Error setting grade for student ${student.studentId}:`, error);
+                    }
+                }
+
+                TahvelJournal.saveGradesForOutcome(journal.missingGrades[index].code);
+            });
+        });
+    }
+
+    // Function to calculate grade
+    static calculateGrade(gradingType: string) {
+        let grade;
+        if (gradingType === 'numeric') {
+            grade = '2';
+        } else {
+            grade = 'MA';
+        }
+        return grade;
+    }
+
+    static setGradeForStudent(id: number, grade: string) {
+        // find <tr> where a href contains student id
+        const tr = TahvelJournal.findTableRowById(id);
+
+        // add grade to corresponding input
+        const gradeInput = tr?.querySelector('input[aria-label="grade"]') as HTMLInputElement;
+        gradeInput.value = grade;
+        // add green border to input
+        gradeInput.style.border = '2px solid #40ff6d';
+        const inputEvent = new Event('input', {bubbles: true});
+        gradeInput.dispatchEvent(inputEvent);
+    }
+
+    static setDateForStudentGrade(id: number, date: Date) {
+        // find tr where a href contains student id
+        const tr = TahvelJournal.findTableRowById(id);
+
+        // add Date to corresponding dateInput
+        const dateInput = tr?.querySelector('input[aria-label="grade date"]') as HTMLInputElement;
+        dateInput.value = DateTime.fromJSDate(date).toFormat('dd.LL.yyyy');
+        // add green border to input
+        dateInput.style.border = '2px solid #40ff6d';
+        const inputEvent = new Event('input', {bubbles: true});
+        dateInput.dispatchEvent(inputEvent);
+    }
+
+    static setCommentForStudentGrade(id: number, gradeWasNegativeDueTo: string) {
+        // find tr where a href contains student id
+        const tr = TahvelJournal.findTableRowById(id);
+
+        const commentInput = tr?.querySelector('input[ng-model="journalEntry.quickUpdateStudents[row.studentId].addInfo"]') as HTMLInputElement;
+        // const commentInput = document.querySelector('input[ng-model="journalEntry.quickUpdateStudents[row.studentId].addInfo"]') as HTMLTextAreaElement;
+        commentInput.value = gradeWasNegativeDueTo;
+        // add green border to input
+        commentInput.style.border = '2px solid #40ff6d';
+        const inputEvent = new Event('input', {bubbles: true});
+        commentInput.dispatchEvent(inputEvent);
+    }
+
+    static saveGradesForOutcome(code: string) {
+        console.log('Saving grades for outcome', code);
+        const saveButton = document.querySelector('button[ng-click="saveQuickOutcomeUpdate(journalEntry)"]') as HTMLElement;
+        saveButton.click();
+    }
+
+    static findTableRowById(id: number): HTMLTableRowElement | null {
+        return Array.from(document.querySelectorAll('tr')).find(tr => {
+            const a = tr.querySelector('a');
+            if (!a) return false;
+            const idRegex = new RegExp(`/students/${id}/main$`);
+            return idRegex.test(a.getAttribute('href'));
+        });
+    }
+
+    // Function to find elements by exact text content
+    static clickQuickUpdate(learningOutcome) {
+        // TODO: add english language support
+        const spans = Array.from(document.querySelectorAll('span')).filter(el => el.innerHTML.trim() === 'ÕV' + learningOutcome);
+        if (spans.length !== 1) {
+            throw new AssistentDetailedError(500, 'Error', 'Could not find the learning outcome');
+        }
+        const thElement = spans[0]?.closest('th'); // Get the parent <th> element
+        if (!thElement) {
+            throw new AssistentDetailedError(500, 'Error', 'Could not find the parent <th> element');
+        }
+
+        const mdIconElement = thElement.querySelector('md-icon') as HTMLElement; // Find the md-icon element
+        if (!mdIconElement) {
+            throw new AssistentDetailedError(500, 'Error', 'Could not find the md-icon element');
+        }
+        // click the md-icon element
+        mdIconElement.click();
+    }
+
+
+    static getLearningOutcomesArray(): AssistentLearningOutcomes[] {
+        const learningOutcomes = Array.from(document.querySelectorAll('div[ng-if="journal.includesOutcomes"] tbody tr')).map(tr => ({
+            name: tr.querySelector('td:nth-child(4)')!.textContent!,
+            code: tr.querySelector('td:nth-child(3)')!.textContent!,
+        }));
+        if (learningOutcomes.length === 0) return learningOutcomes;
+        TahvelJournal.removeGroupNameIfAllOutcomesAreForTheSameGroup(learningOutcomes);
+        return learningOutcomes;
+    }
+
+
+    private static removeGroupNameIfAllOutcomesAreForTheSameGroup(outcomes: AssistentLearningOutcomes[]) {
+
+        const getGroupName = (name: string) => (name.match(/\(([^)]+)\)/g) || []).slice(-1)[0]?.slice(1, -1) || '';
+        const firstGroupName = getGroupName(outcomes[0].name);
+        if (outcomes.every(({name}) => getGroupName(name) === firstGroupName)) {
+            outcomes.forEach(outcome => outcome.name = outcome.name.replace(/\s*\([^)]*\)\s*$/, '').trim());
+        }
     }
 
     static async setJournalEntryStartLessonNr(discrepancy: AssistentJournalDifference): Promise<void> {
@@ -213,7 +360,15 @@ class TahvelJournal {
         if (saveButton) {
             saveButton.classList.add('blink');
         }
+
+        saveButton.addEventListener('click', () => {
+            console.log('saveButton clicked');
+            TahvelJournal.handleSaveButtonClick(discrepancy);
+            window.location.reload();
+        });
     }
+
+
 
     static async setJournalEntryCountOfLessons(discrepancy: AssistentJournalDifference): Promise<void> {
         const timetableLessons = discrepancy.timetableLessonCount;
@@ -231,7 +386,92 @@ class TahvelJournal {
         const saveButton = await AssistentDom.waitForElement('button[ng-click="saveEntry()"]') as HTMLElement;
         if (saveButton) {
             saveButton.classList.add('blink');
+
         }
+
+        saveButton.addEventListener('click', () => {
+            console.log('saveButton clicked');
+            TahvelJournal.handleSaveButtonClick(discrepancy);
+            window.location.reload();
+        });
+
+
+        // saveButton.addEventListener('click', () => {
+        //     // convert discrepancy.date to dd.mm.yyyy
+        //     const date = DateTime.fromISO(discrepancy.date).toFormat('dd.LL.yyyy');
+        //
+        //     // If user clicks saveButton then hide tr where first td element contains discrepancy.date in table id="assistent-discrepancies-table"
+        //     const tr = Array.from(document.querySelectorAll('#assistent-discrepancies-table tbody tr')).find(tr => {
+        //         const td = tr.querySelector('td');
+        //         return td?.textContent === date;
+        //     }) as HTMLElement;
+        //
+        //     if (tr) {
+        //         tr.style.display = 'none';
+        //     }
+        //
+        //     // count tr's left in #assistent-discrepancies-table
+        //     const trs = document.querySelectorAll('#assistent-discrepancies-table tbody tr');
+        //     console.log('trs', trs.length);
+        //
+        //     // trs.length === 1 then remove #assistent-discrepancies-table
+        //     if (trs.length === 1) {
+        //         const table = document.querySelector('#assistent-discrepancies-table') as HTMLElement;
+        //         table.style.display = 'none';
+        //     }
+        //
+        //     // remove data from discrpanciesToTimetable
+        //     // Retrieve the journal from the cache using the journal ID parsed from the current URL
+        //     const journal = AssistentCache.getJournal(parseInt(window.location.href.split('/')[5]));
+        //
+        //     // Find the index of the discrepancy in the journal's differencesToTimetable array that matches the current discrepancy date
+        //     const index = journal.differencesToTimetable.findIndex(d => d.date === discrepancy.date);
+        //
+        //     // Remove the discrepancy from the journal's differencesToTimetable array using the found index
+        //     journal.differencesToTimetable.splice(index, 1);
+        //
+        //     // Update the journal in the cache with the modified differencesToTimetable array
+        //     AssistentCache.updateJournal(journal);
+        // });
+    }
+
+    static handleSaveButtonClick(discrepancy: AssistentJournalDifference) {
+        // saveButton.addEventListener('click', () => {
+            // convert discrepancy.date to dd.mm.yyyy
+            const date = DateTime.fromISO(discrepancy.date).toFormat('dd.LL.yyyy');
+
+            // If user clicks saveButton then hide tr where first td element contains discrepancy.date in table id="assistent-discrepancies-table"
+            const tr = Array.from(document.querySelectorAll('#assistent-discrepancies-table tbody tr')).find(tr => {
+                const td = tr.querySelector('td');
+                return td?.textContent === date;
+            }) as HTMLElement;
+
+            if (tr) {
+                tr.style.display = 'none';
+            }
+
+            // count tr's left in #assistent-discrepancies-table
+            const trs = document.querySelectorAll('#assistent-discrepancies-table tbody tr');
+
+            // trs.length === 1 then remove #assistent-discrepancies-table
+            if (trs.length === 1) {
+                const table = document.querySelector('#assistent-discrepancies-table') as HTMLElement;
+                table.style.display = 'none';
+            }
+
+            // remove data from discrpanciesToTimetable
+            // Retrieve the journal from the cache using the journal ID parsed from the current URL
+            const journal = AssistentCache.getJournal(parseInt(window.location.href.split('/')[5]));
+
+            // Find the index of the discrepancy in the journal's differencesToTimetable array that matches the current discrepancy date
+            const index = journal.differencesToTimetable.findIndex(d => d.date === discrepancy.date);
+
+            // Remove the discrepancy from the journal's differencesToTimetable array using the found index
+            journal.differencesToTimetable.splice(index, 1);
+
+            // Update the journal in the cache with the modified differencesToTimetable array
+            AssistentCache.updateJournal(journal);
+        // });
     }
 
     // Function to preselect the journal entry capacity types
@@ -287,7 +527,14 @@ class TahvelJournal {
 
     }
 
-    static async fetchLearningOutcomes(journalId: number): Promise<AssistentLearningOutcomes[]> {
+    static async fetchLearningOutcomes(journalId: number): Promise<{
+        entryType: string;
+        studentOutcomeResults: { studentId: number }[];
+        code: number;
+        curriculumModuleOutcomes: number;
+        journalId: number;
+        name: string
+    }[]> {
         let response: apiCurriculumModuleEntry[];
         try {
             response = await Api.get(`/journals/${journalId}/journalEntriesByDate`);
@@ -306,6 +553,7 @@ class TahvelJournal {
             .map(entry => ({
                 journalId: journalId,
                 name: entry.nameEt,
+                code: entry.outcomeOrderNr + 1,
                 curriculumModuleOutcomes: entry.curriculumModuleOutcomes,
                 entryType: entry.entryType,
                 studentOutcomeResults: Object.values(entry.studentOutcomeResults || {}).map((result: apiGradeEntry) => ({
@@ -327,16 +575,18 @@ class TahvelJournal {
             },
         };
 
+        let deleteButton;
         if (isLessonsInDiaryButNotInTimetable) {
             action.color = "md-warn";
             action.text = "Vaata sissekannet";
             action.callback = async () => {
                 const style = TahvelDom.createBlinkStyle();
                 document.head.append(style);
-                const deleteButton = await AssistentDom.waitForElement('button[ng-click="delete()"]') as HTMLElement;
+                deleteButton = await AssistentDom.waitForElement('button[ng-click="delete()"]') as HTMLElement;
                 if (deleteButton) {
                     deleteButton.classList.add('blink');
                 }
+                TahvelJournal.handleSaveButtonClick(discrepancy);
             };
         } else if (isLessonsInTimetableButNotInDiary) {
             action.color = "md-primary";
@@ -373,6 +623,18 @@ class TahvelJournal {
             action.elementOrSelector,
             action.callback
         );
+    }
+
+    // Function to find and click the radio button
+    static setGradeInputAsSelectToFalse() {
+        // Find the radio button by its attributes
+        const radioButton = document.querySelector('md-radio-button[aria-label="Sisestusväljana"]');
+        // If the radio button is found, trigger a click event
+        if (radioButton) {
+            (radioButton as HTMLElement).click();
+        } else {
+            console.error("Radio button not found");
+        }
     }
 }
 

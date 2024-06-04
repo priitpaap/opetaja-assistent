@@ -100,6 +100,7 @@ export class AssistentCache {
             for (const curriculumModule of journal.learningOutcomes) {
                 const missingGradesForModule: AssistentStudentsWithoutGrades = {
                     name: curriculumModule.name,
+                    code: curriculumModule.code,
                     studentList: []
                 };
 
@@ -136,7 +137,17 @@ export class AssistentCache {
             journal.lessonDiscrepancies = true;
         }
     }
+
+    static updateJournal(journal: AssistentJournal) {
+        const existingJournal = AssistentCache.journals.find(j => j.id === journal.id);
+        if (existingJournal) {
+            Object.assign(existingJournal, journal);
+        } else {
+            AssistentCache.journals.push(journal);
+        }
+
+    }
 }
 
 export default AssistentCache;
-//console.log('AssistentCache', AssistentCache.journals);
+console.log('AssistentCache', AssistentCache.journals);
