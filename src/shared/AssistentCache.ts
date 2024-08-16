@@ -1,9 +1,9 @@
-import {
-    type AssistentJournal,
-    type AssistentJournalDifference,
-    type AssistentLessonTime, AssistentStudentStatus, type AssistentStudentsWithoutGrades
-} from "~src/shared/AssistentTypes";
-import {LessonType} from "~src/shared/AssistentTypes";
+import { type AssistentJournal, type AssistentJournalDifference, type AssistentLessonTime, AssistentStudentStatus, type AssistentStudentsWithoutGrades } from "~src/shared/AssistentTypes";
+import { LessonType } from "~src/shared/AssistentTypes";
+
+
+
+
 
 export class AssistentCache {
 
@@ -122,7 +122,12 @@ export class AssistentCache {
     static findJournalLessonsDifferencesFact(id: number) {
         // if differencesToTimetable length > 0 and differencesToTimetable.journalLessonCount === 0, then set lessonMissing to true
         const journal = AssistentCache.getJournal(id);
-        if (journal && journal.differencesToTimetable.length > 0 && journal.differencesToTimetable.find(difference => difference.journalLessonCount === 0)) {
+        if (journal
+            && journal.differencesToTimetable.length > 0
+            && journal.differencesToTimetable.find(difference => difference.journalLessonCount === 0
+                // Check if the date is in the past ignoring the time
+                && new Date(difference.date).setHours(0, 0, 0, 0) < new Date().setHours(0, 0, 0, 0)
+            )) {
             journal.lessonMissing = true;
         }
 
