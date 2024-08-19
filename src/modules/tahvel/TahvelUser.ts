@@ -32,4 +32,5 @@ class TahvelUser {
 
 }
 
+
 export default TahvelUser;

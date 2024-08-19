@@ -1,20 +1,21 @@
 export interface AssistentJournal {
-    id: number;
-    name: string;
-    entriesInTimetable: AssistentTimetableEntry[];
-    entriesInJournal: AssistentJournalEntry[];
-
-    differencesToTimetable: AssistentJournalDifference[];
-    students: AssistentStudent[];
-    learningOutcomes: AssistentLearningOutcomes[];
-    missingGrades: AssistentStudentsWithoutGrades[];
-    independentWorkPlanned: number;
-    independentWorkGiven: number;
-    contactLessonsPlanned: number;
-    contactLessonsGiven: number;
-    gradingType: AssistentGradingType;
-    lessonMissing: boolean;
-    lessonDiscrepancies: boolean;
+  id: number
+  name: string
+  entriesInTimetable: AssistentTimetableEntry[]
+  entriesInJournal: AssistentJournalEntry[]
+  exercisesLists: AssistentExerciseListEntry[]
+  differencesToTimetable: AssistentJournalDifference[]
+  students: AssistentStudent[]
+  learningOutcomes: AssistentLearningOutcomes[]
+  missingIndependentWork: AssistentStudentsWithoutIndependentWork[]
+  missingGrades: AssistentStudentsWithoutGrades[]
+  independentWorkPlanned: number
+  independentWorkGiven: number
+  contactLessonsPlanned: number
+  contactLessonsGiven: number
+  gradingType: AssistentGradingType
+  lessonMissing: boolean
+  lessonDiscrepancies: boolean
 }
 
 export enum AssistentGradingType {
@@ -47,14 +48,21 @@ export interface AssistentJournalDifference {
     journalEntryId: number;
 }
 
+export interface AssistentExerciseListEntry {
+  id: number
+  content: string
+  lessonType: LessonType
+  homeworkDuedate: string
+}
+
 export interface AssistentTimetableEntry {
-    id: number;
-    name: string;
-    date: string;
-    timeStart: string;
-    timeEnd: string;
-    firstLessonStartNumber: number;
-    journalId: number;
+  id: number
+  name: string
+  date: string
+  timeStart: string
+  timeEnd: string
+  firstLessonStartNumber: number
+  journalId: number
 }
 
 export interface AssistentJournalEntry {
@@ -101,5 +109,11 @@ export interface AssistentStudentsWithoutGrades {
     name: string,
     code: string,
     studentList: AssistentStudent[]
+}
+
+export interface AssistentStudentsWithoutIndependentWork {
+  studentId: number
+  name: string
+  exerciseList: AssistentExerciseListEntry[]
 }
 

@@ -17,6 +17,14 @@ export interface apiJournalEntry {
     journalStudentResults: apiJournalStudentEntry[];
 }
 
+export interface apiExercisesListEntry {
+  content: string
+  entryType: string
+  id: number
+  homeworkDuedate: string
+}
+
+
 export interface apiStudentEntry {
     id: number;
     studentId: number;
