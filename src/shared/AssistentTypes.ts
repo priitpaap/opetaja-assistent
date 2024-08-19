@@ -3,6 +3,7 @@ export interface AssistentJournal {
     name: string;
     entriesInTimetable: AssistentTimetableEntry[];
     entriesInJournal: AssistentJournalEntry[];
+
     differencesToTimetable: AssistentJournalDifference[];
     students: AssistentStudent[];
     learningOutcomes: AssistentLearningOutcomes[];
@@ -22,6 +23,7 @@ export enum AssistentGradingType {
 }
 
 export interface AssistentStudent {
+    id: number;
     studentId: number;
     name: string;
     status: AssistentStudentStatus;
@@ -62,6 +64,7 @@ export interface AssistentJournalEntry {
     lessonType: LessonType
     lessonCount: number;
     firstLessonStartNumber: number;
+    journalStudentResults: AssistentStudentEntryResults[];
 }
 
 export interface AssistentLessonTime {
@@ -70,6 +73,7 @@ export interface AssistentLessonTime {
     timeEnd: string;
     note?: string;
 }
+
 
 export enum LessonType {
     independentWork = 'independentWork',
@@ -84,7 +88,13 @@ export interface AssistentLearningOutcomes {
 }
 
 export interface AssistentStudentOutcomeResults {
-    studentId: number,
+    studentId: number
+}
+
+export interface AssistentStudentEntryResults {
+    studentId: number;
+    gradeCode: string;
+    gradeNumber?: number;
 }
 
 export interface AssistentStudentsWithoutGrades {

@@ -1,18 +1,25 @@
-import AssistentCache from "~src/shared/AssistentCache";
-import Api from "~src/shared/AssistentApiClient";
-import TahvelLessonTimes from './TahvelLessonTimes.json';
-import TahvelStudyYear from "./TahvelStudyYear";
-import TahvelTimetable from "~src/modules/tahvel/TahvelTimetable";
 import TahvelJournal from "~src/modules/tahvel/TahvelJournal";
-import TahvelJournalList from "~src/modules/tahvel/TahvelJournalList";
 import TahvelJournalEntryDialog from "~src/modules/tahvel/TahvelJournalEntryDialog";
-import TahvelUser from "~src/modules/tahvel/TahvelUser";
-import AssistentDom from "~src/shared/AssistentDom";
+import TahvelJournalList from "~src/modules/tahvel/TahvelJournalList";
 import TahvelStudents from "~src/modules/tahvel/TahvelStudents";
-import {apiAssessmentEntry, type apiJournalInfoEntry} from "~src/modules/tahvel/TahvelTypes";
-import {AssistentGradingType} from "~src/shared/AssistentTypes";
-import {AssistentDetailedError} from "~src/shared/AssistentDetailedError";
-import {AssistentApiError} from "~src/shared/AssistentApiError";
+import TahvelTimetable from "~src/modules/tahvel/TahvelTimetable";
+import { apiAssessmentEntry, type apiJournalInfoEntry } from "~src/modules/tahvel/TahvelTypes";
+import TahvelUser from "~src/modules/tahvel/TahvelUser";
+import Api from "~src/shared/AssistentApiClient";
+import { AssistentApiError } from "~src/shared/AssistentApiError";
+import AssistentCache from "~src/shared/AssistentCache";
+import { AssistentDetailedError } from "~src/shared/AssistentDetailedError";
+import AssistentDom from "~src/shared/AssistentDom";
+import { AssistentGradingType } from "~src/shared/AssistentTypes";
+
+
+
+import TahvelLessonTimes from "./TahvelLessonTimes.json";
+import TahvelStudyYear from "./TahvelStudyYear";
+
+
+
+
 
 const urlForJournalsList = '/#/journals(\\?_menu)?';
 const urlForJournalEdit = '#/journal/\\d+/edit';
@@ -164,17 +171,19 @@ class Tahvel {
                     lessonDiscrepancies: false
                 });
             }
-
             // Find the journal and add the entry to it
             AssistentCache.getJournal(entry.journalId).entriesInTimetable.push(entry);
         }
 
         // Iterate over the journals and fill entriesInJournal
         for (const journal of AssistentCache.journals) {
+
             // Add journal entries to the journal object
-            journal.entriesInJournal = await TahvelJournal.fetchEntries(journal.id);
+            const journalData = await TahvelJournal.fetchJournalData(journal.id)
+            journal.entriesInJournal = journalData.entries;
+            journal.learningOutcomes = journalData.learningOutcomes;
             journal.students = await TahvelStudents.fetchEntries(journal.id);
-            journal.learningOutcomes = await TahvelJournal.fetchLearningOutcomes(journal.id);
+
 
             let response: apiJournalInfoEntry;
             try {

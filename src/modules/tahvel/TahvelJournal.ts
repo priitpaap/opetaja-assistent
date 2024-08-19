@@ -7,7 +7,11 @@ import {
     LessonType
 } from "~src/shared/AssistentTypes";
 import {DateTime} from 'luxon';
-import type {apiCurriculumModuleEntry, apiGradeEntry, apiJournalEntry} from "./TahvelTypes";
+import type {
+    apiCurriculumModuleEntry,
+    apiStudentOutcomeEntry,
+    apiJournalEntry,
+} from "./TahvelTypes";
 import AssistentCache from "~src/shared/AssistentCache";
 import TahvelDom from "./TahvelDom";
 import AssistentDom from "~src/shared/AssistentDom";
@@ -15,38 +19,6 @@ import {AssistentDetailedError} from "~src/shared/AssistentDetailedError";
 
 
 class TahvelJournal {
-    static async fetchEntries(journalId: number): Promise<AssistentJournalEntry[]> {
-
-        let response: apiJournalEntry[];
-
-        try {
-
-            response = await Api.get(`/journals/${journalId}/journalEntriesByDate`);
-
-        } catch (e) {
-
-            // If 412 then we don't have permission to read this particular journal, and we should just skip it
-            if (e.statusCode === 412) {
-                return [];
-            }
-
-        }
-
-        if (!response) {
-
-            throw new AssistentDetailedError(500, 'Error', 'Journal entries data is missing or in unexpected format');
-
-        }
-
-        return response.map(entry => ({
-            id: entry.id,
-            date: entry.entryDate,
-            name: entry.nameEt,
-            lessonType: entry.entryType === 'SISSEKANNE_T' ? LessonType.lesson : (entry.entryType === 'SISSEKANNE_I' ? LessonType.independentWork : LessonType.other),
-            lessonCount: entry.lessons,
-            firstLessonStartNumber: entry.startLessonNr
-        }));
-    }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     static async findJournalEntryElement(discrepancy: any): Promise<HTMLElement | null> {
@@ -220,12 +192,13 @@ class TahvelJournal {
 
                 for (const student of journal.missingGrades[index].studentList) {
                     try {
-                        const grade = TahvelJournal.calculateGrade(gradingType);
+                        const studentGrades = TahvelJournal.getAllGradesForStudent(journal.entriesInJournal, student.id, gradingType);
+                        const grade = TahvelJournal.calculateGrade(gradingType, studentGrades);
 
-                        TahvelJournal.setGradeForStudent(student.studentId, grade);
+                        TahvelJournal.setGradeForStudent(student.studentId, grade.toString());
                         TahvelJournal.setDateForStudentGrade(student.studentId, new Date());
 
-                        if (grade < 3 || grade === "MA") {
+                        if (typeof  grade == 'number' && grade > 3 || grade === "MA") {
                             TahvelJournal.setCommentForStudentGrade(student.studentId, "Grade was negative due to...");
                         }
                     } catch (error) {
@@ -238,15 +211,43 @@ class TahvelJournal {
         });
     }
 
-    // Function to calculate grade
-    static calculateGrade(gradingType: string) {
-        let grade;
-        if (gradingType === 'numeric') {
-            grade = '2';
-        } else {
-            grade = 'MA';
+
+
+    static getAllGradesForStudent(entriesInJournal: AssistentJournalEntry[], studentId: number, gradingType: string): number[] {
+        const grades: number [] = [];
+
+        for (const journalEntry of entriesInJournal) {
+            const studentResults = journalEntry.journalStudentResults
+                .filter(result => result.studentId === studentId && result.gradeNumber > 0)
+                .map(result => result.gradeNumber);
+
+            if (journalEntry.lessonType === LessonType.independentWork && studentResults.length === 0) {
+                if (gradingType !== 'numeric') {
+                    return [2];
+                } else {
+                    studentResults.push(2);
+                }
+            }
+
+            grades.push(...studentResults);
         }
-        return grade;
+        return grades;
+    }
+
+    static calculateGrade(gradingType: string, grades: number[]  ): string | number {
+
+      if (grades.length === 0 || grades.length ===1) {
+        return gradingType === 'numeric' ? 2 : 'MA';
+      }
+
+      const sum = grades.reduce((acc, grade) => acc + grade, 0);
+      const averageGrade = sum / grades.length;
+
+      if (gradingType === 'numeric') {
+        return Math.round(averageGrade);
+      } else {
+        return averageGrade >= 3 ? 'A' : 'MA';
+      }
     }
 
     static setGradeForStudent(id: number, grade: string) {
@@ -527,39 +528,85 @@ class TahvelJournal {
 
     }
 
-    static async fetchLearningOutcomes(journalId: number): Promise<{
-        entryType: string;
-        studentOutcomeResults: { studentId: number }[];
-        code: number;
-        curriculumModuleOutcomes: number;
-        journalId: number;
-        name: string
-    }[]> {
-        let response: apiCurriculumModuleEntry[];
+    static async fetchJournalData(journalId: number): Promise<{
+        entries: AssistentJournalEntry[],
+        learningOutcomes: AssistentLearningOutcomes[],
+    }> {
+
+        let response: (apiJournalEntry | apiCurriculumModuleEntry)[];
+
         try {
             response = await Api.get(`/journals/${journalId}/journalEntriesByDate`);
         } catch (e) {
             if (e.statusCode === 412) {
-                return [];
+                return {
+                    entries: [],
+                    learningOutcomes: [],
+                };
             }
+            throw new AssistentDetailedError(500, 'Error', 'Journal entries data is missing or in unexpected format');
         }
 
         if (!response) {
             throw new AssistentDetailedError(500, 'Error', 'Journal entries data is missing or in unexpected format');
         }
 
-        return response
-            .filter(entry => entry.entryType === 'SISSEKANNE_O' || entry.entryType === 'SISSEKANNE_L')
+        function getGradeNumber(gradeCode: string): number {
+            if (gradeCode.includes('MA')) {
+                return 2;
+            }
+            else if (/[^A-Za-z]A$/.test(gradeCode) || /^A$/.test(gradeCode)) {
+                return 5;
+            }
+            else {
+                const match = gradeCode.match(/\d+/);
+                return match ? parseInt(match[0], 10) : 0;
+            }
+        }
+
+        const entries: AssistentJournalEntry[] = response
+            .filter((entry): entry is apiJournalEntry => (entry as apiJournalEntry).lessons !== undefined)
+            .map(entry => {
+
+                const studentResults = entry.journalStudentResults
+                    ? Object.keys(entry.journalStudentResults).flatMap(studentId =>
+                        entry.journalStudentResults[studentId].map(result => ({
+                            studentId: result.journalStudentId,
+                            gradeCode: result.grade?.code || '',
+                            gradeNumber: getGradeNumber(result.grade?.code || '')
+                        }))
+                    )
+                    : [];
+
+                return {
+                    id: entry.id,
+                    date: entry.entryDate,
+                    name: entry.nameEt,
+                    lessonType: entry.entryType === 'SISSEKANNE_T' ? LessonType.lesson : (entry.entryType === 'SISSEKANNE_I' ? LessonType.independentWork : LessonType.other),
+                    lessonCount: entry.lessons,
+                    firstLessonStartNumber: entry.startLessonNr,
+                    journalStudentResults: studentResults
+                };
+            });
+
+        const learningOutcomes: AssistentLearningOutcomes[] = response
+            .filter((entry): entry is apiCurriculumModuleEntry =>
+                entry.entryType === 'SISSEKANNE_O' || entry.entryType === 'SISSEKANNE_L')
             .map(entry => ({
                 journalId: journalId,
                 name: entry.nameEt,
-                code: entry.outcomeOrderNr + 1,
+                code: (entry.outcomeOrderNr + 1).toString(),
                 curriculumModuleOutcomes: entry.curriculumModuleOutcomes,
                 entryType: entry.entryType,
-                studentOutcomeResults: Object.values(entry.studentOutcomeResults || {}).map((result: apiGradeEntry) => ({
+                studentOutcomeResults: Object.values(entry.studentOutcomeResults || {}).map((result: apiStudentOutcomeEntry) => ({
                     studentId: result.studentId,
                 }))
             }));
+
+        return {
+            entries,
+            learningOutcomes,
+        };
     }
 
     private static async createActionButtonForLessonDiscrepancyAction(discrepancy: AssistentJournalDifference) {

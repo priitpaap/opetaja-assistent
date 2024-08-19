@@ -14,9 +14,11 @@ export interface apiJournalEntry {
     lessons: number;
     startLessonNr: number;
     id: number;
+    journalStudentResults: apiJournalStudentEntry[];
 }
 
 export interface apiStudentEntry {
+    id: number;
     studentId: number;
     fullname: string;
     status: apiStudentStatus;
@@ -36,11 +38,21 @@ export interface apiCurriculumModuleEntry {
     outcomeOrderNr: number;
     curriculumModuleOutcomes: number;
     entryType: string;
-    studentOutcomeResults: apiGradeEntry[];
+    studentOutcomeResults: apiStudentOutcomeEntry[];
 }
 
-export interface apiGradeEntry {
+export interface apiStudentOutcomeEntry {
     studentId: number;
+    grade:  apiGradeEntryGrade
+}
+
+export interface apiJournalStudentEntry {
+    journalStudentId: number;
+    grade:  apiGradeEntryGrade
+}
+
+export interface apiGradeEntryGrade {
+    code: string;
 }
 
 export interface apiJournalInfoEntry {
@@ -69,3 +81,4 @@ export interface TahvelStudyYear {
     startDate: string;
     endDate: string;
 }
+
