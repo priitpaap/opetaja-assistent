@@ -3,6 +3,7 @@ import { DateTime } from 'luxon';
 
 
 import Api from "~src/shared/AssistentApiClient";
+import AssistentApiClient from "~src/shared/AssistentApiClient";
 import AssistentCache from "~src/shared/AssistentCache";
 import { AssistentDetailedError } from "~src/shared/AssistentDetailedError";
 import AssistentDom from "~src/shared/AssistentDom";
@@ -11,14 +12,14 @@ import { type AssistentExerciseListEntry, type AssistentJournal, type AssistentJ
 
 
 import TahvelDom from "./TahvelDom";
-import type { apiCurriculumModuleEntry, apiExercisesListEntry, apiJournalEntry, apiStudentOutcomeEntry } from "./TahvelTypes";
+import { type apiCurriculumModuleEntry, type apiExercisesListEntry, type apiJournalEntry, type apiStudentOutcomeEntry } from "./TahvelTypes";
 
 
 
 
 
 class TahvelJournal {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line
   static async findJournalEntryElement(
     discrepancy: any
   ): Promise<HTMLElement | null> {
@@ -316,55 +317,199 @@ class TahvelJournal {
       return
 
     const journal = await TahvelJournal.getJournalWithValidation()
-    if (!journal || journal.entriesInJournal.length === 0) return
+    if (!journal || journal.missingIndependentWork.length === 0) return
 
+    // Create the table structure
     const missingIndependentWorksTable = AssistentDom.createStructure(`
-            <div id="assistent-grades-table-container">
-                <table id="assistent-independent-works-table-container" class="assistent-table">
-                    <caption>Sisse kandmata iseseisvad tööd</caption>
-                    <thead>
-                        <tr>
-                            <th>Tähtaeg</th>
-                            <th>Iseseisev töö nimetus</th>
-                            <th>Õpilane</th>
-                            <th>Tegevus</th>
-                            <th>Komentaar</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${journal.missingGrades
-                          .map(
-                            ({ name, studentList }) => `
-                            <tr>
-                                <td class="align-left">${name}</td>
-                                <td class="align-left">${studentList
-                                  .map(({ name }) => name)
-                                  .join(", ")}</td>
-                                <td>                                    <div class="grade-buttons">
-                                        ${[5, 4, 3, 2, "MA"]
-                                          .map(
-                                            (grade) => `
-                                            <button class="grade-btn" data-grade="${grade}" onclick="">
-                                                ${grade}
-                                            </button>
-                                        `
-                                          )
-                                          .join("")}
-                                    </div></td>
-                            </tr>
-                        `
-                          )
-                          .join("")}
-                        <tr>
-                            <td colspan="3" class="align-left">
-                                <
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>`)
+  <div>
+      <div id="assistent-grades-table-container">
+          <table id="assistent-independent-works-table" class="assistent-table">
+              <caption>Sisse kandmata iseseisvad tööd</caption>
+              <thead>
+                  <tr>
+                      <th>Tähtaeg</th>
+                      <th>Iseseisev töö nimetus</th>
+                      <th>Õpiväljund</th>
+                      <th>Õpilane</th>
+                      <th>Tegevus</th>
+                      <th>Komentaar</th>
+                  </tr>
+              </thead>
+              <tbody>
+                  ${journal.missingIndependentWork
+                    .map(({ name, exerciseList, studentId }) =>
+                      exerciseList
+                        .map((exercise) => {
+                          // Join the learning outcomes into a string separated by commas
+                          const learningOutcomes =
+                            exercise.learningOutcome.join(", ")
 
+                          return `
+                  <tr>
+                      <td class="align-left">${exercise.homeworkDuedate}</td>
+                      <td class="align-left">${exercise.content}</td>
+                      <td class="align-left">${learningOutcomes}</td>     
+                      <td class="align-left">${name}</td>
+                      <td class="align-left">
+                          <div class="grade-buttons">
+                              ${[5, 4, 3, 2, "A", "MA"]
+                                .map(
+                                  (grade) => `
+                                    <button class="grade-btn" data-grade="${grade}" data-student="${studentId}" data-exercise="${exercise.id}">
+                                        ${grade}
+                                    </button>
+                                `
+                                )
+                                .join("")}
+                          </div>
+                      </td>
+                      <td><input type="text" class="comment-input" placeholder="Kommentaar" data-student="${studentId}" data-exercise="${
+                            exercise.id
+                          }" /></td>
+                  </tr>
+              `
+                        })
+                        .join("")
+                    )
+                    .join("")}
+              </tbody>
+              <tfoot>
+                  <tr>
+                      <td colspan="6" class="align-left">
+                          <button id="save-grades-btn" class="md-raised md-button md-ink-ripple md-primary">Salvesta</button>
+                      </td>
+                  </tr>
+              </tfoot>
+          </table>
+      </div>
+  </div>`)
+
+    // Add the table to the DOM
     journalHeaderElement.before(missingIndependentWorksTable)
+
+    // eslint-disable-next-line
+    const selectedGrades = new Map<number, any>()
+
+    document.querySelectorAll(".grade-buttons").forEach((buttonGroup) => {
+      buttonGroup.addEventListener("click", function (event) {
+        const target = event.target as HTMLElement
+
+        if (!target.classList.contains("grade-btn")) return
+
+        const btn = target as HTMLButtonElement
+        const studentId = Number(btn.getAttribute("data-student"))
+        const exerciseId = Number(btn.getAttribute("data-exercise"))
+        const grade = btn.getAttribute("data-grade")
+
+        const isSelected = btn.classList.contains("selected")
+
+        // Deselect all buttons in the current row
+        buttonGroup.querySelectorAll(".grade-btn").forEach((button) => {
+          button.classList.remove("selected")
+        })
+
+        if (!isSelected) {
+          // If not previously selected, select this button
+          btn.classList.add("selected")
+
+          // Add or update the selected grade
+          const existingEntries = selectedGrades.get(exerciseId) || []
+          const newEntry = {
+            journalStudent: studentId,
+            grade: {
+              code: `KUTSEHINDAMINE_${grade}`,
+              value: grade.toString(),
+              value2: grade.toString()
+            },
+            isLessonAbsence: false,
+            lessonAbsences: {},
+            addInfo: (
+              document.querySelector(
+                `.comment-input[data-student="${studentId}"][data-exercise="${exerciseId}"]`
+              ) as HTMLInputElement
+            ).value
+          }
+
+          // Replace or add the entry for this student
+          const updatedEntries = existingEntries.filter(
+            (entry) => entry.journalStudent !== studentId
+          )
+          updatedEntries.push(newEntry)
+          selectedGrades.set(exerciseId, updatedEntries)
+        } else {
+          // If already selected, deselect and remove the grade
+          selectedGrades.delete(exerciseId)
+        }
+      })
+    })
+
+    // Handle the "Salvesta" button click
+    document
+      .getElementById("save-grades-btn")
+      .addEventListener("click", async () => {
+        const savePromises = []
+
+        for (const [exerciseId, studentEntries] of selectedGrades.entries()) {
+          const savePromise = (async () => {
+            try {
+              // Fetch the existing journal entry
+              const existingEntry = await TahvelJournal.fetchJournalEntry(
+                journal.id,
+                exerciseId
+              )
+
+              // Filter out any student entries that are already present in existingEntry.journalEntryStudents
+              const updatedExistingEntries =
+                existingEntry.journalEntryStudents.filter(
+                  (existingStudentEntry) => {
+                    // Find the corresponding new entry
+                    const newStudentEntry = studentEntries.find(
+                      (newEntry) =>
+                        newEntry.journalStudent ===
+                        existingStudentEntry.journalStudent
+                    )
+
+                    if (newStudentEntry) {
+                      // If it exists, update the existing entry with the new data
+                      newStudentEntry.id = existingStudentEntry.id // Keep the original ID
+                      return false // Remove this entry from the existing entries
+                    }
+
+                    return true // Keep this entry if no corresponding new entry exists
+                  }
+                )
+
+              // Combine the filtered existing entries with the new ones
+              existingEntry.journalEntryStudents = [
+                ...updatedExistingEntries,
+                ...studentEntries
+              ]
+
+              // Send the updated journal entry
+              await AssistentApiClient.put(
+                `/journals/${journal.id}/journalEntry/${exerciseId}`,
+                existingEntry
+              )
+              console.log(
+                `Successfully saved grades and comments for exercise ${exerciseId}`
+              )
+            } catch (error) {
+              console.error(
+                `Failed to save grades and comments for exercise ${exerciseId}`,
+                error
+              )
+            }
+          })()
+
+          savePromises.push(savePromise)
+        }
+
+        // Wait for all the save operations to complete
+        await Promise.all(savePromises)
+
+        // Reload the page after all data has been saved
+        window.location.reload()
+      })
   }
 
   static getAllGradesForStudent(
@@ -641,6 +786,11 @@ class TahvelJournal {
     // });
   }
 
+  static getXsrfToken(): string | null {
+    const match = document.cookie.match(new RegExp("(^| )XSRF-TOKEN=([^;]+)"))
+    return match ? match[2] : null
+  }
+
   static handleSaveButtonClick(discrepancy: AssistentJournalDifference) {
     // saveButton.addEventListener('click', () => {
     // convert discrepancy.date to dd.mm.yyyy
@@ -863,6 +1013,7 @@ class TahvelJournal {
 
     try {
       response = await Api.get(`/journals/${journalId}/journalEntry`)
+      console.log(response)
     } catch (e) {
       if (e.statusCode === 412) {
         return []
@@ -882,17 +1033,29 @@ class TahvelJournal {
       )
     }
 
-    return response.content.map((entry) => ({
-      id: entry.id,
-      content: entry.content,
-      lessonType:
-        entry.entryType === "SISSEKANNE_T"
-          ? LessonType.lesson
-          : entry.entryType === "SISSEKANNE_I"
-          ? LessonType.independentWork
-          : LessonType.other,
-      homeworkDuedate: entry.homeworkDuedate
-    }))
+    return response.content.map((entry) => {
+      // Parse and format the date
+      const dueDate = new Date(entry.homeworkDuedate)
+      const day = String(dueDate.getDate()).padStart(2, "0")
+      const month = String(dueDate.getMonth() + 1).padStart(2, "0") // Months are zero-indexed
+      const year = dueDate.getFullYear()
+      const formattedDate = `${day}.${month}.${year}` // dd.mm.yyyy format
+
+      const learningOutcomeMatches = entry.nameEt?.match(/ÕV(\d+)/g)
+
+      return {
+        id: entry.id,
+        learningOutcome: learningOutcomeMatches ?? [],
+        content: entry.content,
+        lessonType:
+          entry.entryType === "SISSEKANNE_T"
+            ? LessonType.lesson
+            : entry.entryType === "SISSEKANNE_I"
+            ? LessonType.independentWork
+            : LessonType.other,
+        homeworkDuedate: formattedDate // Set the formatted date here
+      }
+    })
   }
 
   private static async createActionButtonForLessonDiscrepancyAction(
@@ -990,6 +1153,23 @@ class TahvelJournal {
       console.error("Radio button not found")
     }
   }
+
+  // eslint-disable-next-line
+  static async fetchJournalEntry(
+    journalId: number,
+    exerciseId: number
+  ): Promise<any> {
+    try {
+      const response = await AssistentApiClient.get(
+        `/journals/${journalId}/journalEntry/${exerciseId}`
+      )
+      return response
+    } catch (error) {
+      console.error(`Failed to fetch journal entry ${exerciseId}`, error)
+      throw error
+    }
+  }
 }
+
 
 export default TahvelJournal;

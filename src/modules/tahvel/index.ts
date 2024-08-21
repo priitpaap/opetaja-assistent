@@ -45,17 +45,17 @@ class Tahvel {
     },
     {
       description:
-        "Inject alerts to journal pages when there are missing grades",
-      urlFragment: new RegExp(urlForJournalEdit),
-      elementToWaitFor: elementInJournalEdit,
-      action: TahvelJournal.addMissingGradesTable
-    },
-    {
-      description:
         "Inject alerts to journal pages when there are missing independent works",
       urlFragment: new RegExp(urlForJournalEdit),
       elementToWaitFor: elementInJournalEdit,
       action: TahvelJournal.addMissingIndependentWorksTable
+    },
+    {
+      description:
+        "Inject alerts to journal pages when there are missing grades",
+      urlFragment: new RegExp(urlForJournalEdit),
+      elementToWaitFor: elementInJournalEdit,
+      action: TahvelJournal.addMissingGradesTable
     }
   ]
 
@@ -202,6 +202,7 @@ class Tahvel {
       journal.exercisesLists = await TahvelJournal.fetchExercisesLists(
         journal.id
       )
+      console.log(journal.exercisesLists)
 
       let response: apiJournalInfoEntry
       try {
@@ -243,9 +244,9 @@ class Tahvel {
 
       // Find discrepancies for this journal
       AssistentCache.findJournalDiscrepancies(journal.id)
+      AssistentCache.findIndependentWorkDiscrepancies(journal.id)
       AssistentCache.findCurriculumModuleOutcomeDiscrepancies(journal.id)
       AssistentCache.findJournalLessonsDifferencesFact(journal.id)
-      AssistentCache.findIndependentWorkDiscrepancies(journal.id)
     }
   }
 
@@ -404,7 +405,23 @@ class Tahvel {
                 .assistent-message-box-close-button:focus {
                     outline: none;
                 }
-                
+                .grade-btn {
+                    background-color: #f0f0f0;
+                    border: 1px solid #ccc;
+                    padding: 5px 10px;
+                    margin: 2px;
+                    cursor: pointer;
+                }
+                .grade-btn.selected {
+                    background-color: #007bff;
+                    color: white;
+                    border-color: #007bff;
+                }
+                .grade-buttons {
+                    display: flex;
+                    justify-content: flex-start;
+                    gap: 5px;
+                }
             </style>`)
     )
   }

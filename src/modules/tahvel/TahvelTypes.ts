@@ -18,12 +18,12 @@ export interface apiJournalEntry {
 }
 
 export interface apiExercisesListEntry {
+  nameEt: string
   content: string
   entryType: string
   id: number
   homeworkDuedate: string
 }
-
 
 export interface apiStudentEntry {
     id: number;

@@ -50,6 +50,7 @@ export interface AssistentJournalDifference {
 
 export interface AssistentExerciseListEntry {
   id: number
+  learningOutcome: string[]
   content: string
   lessonType: LessonType
   homeworkDuedate: string

@@ -186,7 +186,6 @@ export class AssistentCache {
       }
     })
 
-    console.log("missingIndependentWork", missingIndependentWork)
     journal.missingIndependentWork = missingIndependentWork
   }
 

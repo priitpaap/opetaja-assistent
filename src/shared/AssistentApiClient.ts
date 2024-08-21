@@ -1,4 +1,9 @@
-import {AssistentApiError} from "~src/shared/AssistentApiError";
+import TahvelJournal from "~src/modules/tahvel/TahvelJournal";
+import { AssistentApiError } from "~src/shared/AssistentApiError"
+
+
+
+
 
 class AssistentApiClient {
     static url: string = AssistentApiClient.extractBaseUrl();
@@ -78,6 +83,43 @@ class AssistentApiClient {
 
         return `${requestHeadersLog}${formattedRequestBody}\n\n${responseHeadersLog}${formattedResponseBody}`;
     }
+
+    // eslint-disable-next-line
+    static async put(endpoint: string, data: any, headers: HeadersInit = {}): Promise<any> {
+        const xsrfToken = TahvelJournal.getXsrfToken(); // Get the XSRF token from TahvelJournal
+        if (!xsrfToken) {
+            throw new Error('XSRF token not found');
+        }
+
+        const response = await fetch(`${AssistentApiClient.url}${endpoint}`, {
+            method: 'PUT',
+            headers: {
+                'X-XSRF-TOKEN': xsrfToken,
+                'Content-Type': 'application/json',
+                ...headers
+            },
+            body: JSON.stringify(data),
+            credentials: 'include' // Ensures cookies are sent with the request
+        });
+
+        if (!response.ok) {
+            const responseText = await response.text();
+            throw new AssistentApiError(response.status, endpoint, responseText, {
+                method: 'PUT',
+                headers: {
+                    'X-XSRF-TOKEN': xsrfToken,
+                    'Content-Type': 'application/json',
+                    ...headers
+                },
+                body: JSON.stringify(data),
+                credentials: 'include'
+            }, response, 'Error occurred during PUT request');
+        }
+
+        return response.json();
+    }
+
 }
+
 
 export default AssistentApiClient;
