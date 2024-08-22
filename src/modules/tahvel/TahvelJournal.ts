@@ -20,8 +20,7 @@ import { type apiCurriculumModuleEntry, type apiExercisesListEntry, type apiJour
 
 class TahvelJournal {
   // eslint-disable-next-line
-  static async findJournalEntryElement(
-    discrepancy: any
+  static async findJournalEntryElement(discrepancy: any
   ): Promise<HTMLElement | null> {
     // Extract and format the discrepancy date as 'dd.mm'
     const discrepancyDate = new Date(discrepancy.date)
@@ -179,152 +178,137 @@ class TahvelJournal {
 
   static async addMissingGradesTable() {
     const journalHeaderElement = document.querySelector(
-      'div[ng-if="journal.hasJournalStudents"]'
-    )
+        'div[ng-if="journal.hasJournalStudents"]'
+    );
     if (
-      !journalHeaderElement ||
-      journalHeaderElement.getAttribute(
-        "data-lesson-discrepancies-table-is-injected"
-      ) === "true"
+        !journalHeaderElement ||
+        journalHeaderElement.getAttribute("data-lesson-discrepancies-table-is-injected") === "true"
     )
-      return
+      return;
 
-    const journal = await TahvelJournal.getJournalWithValidation()
+    const journal = await TahvelJournal.getJournalWithValidation();
     if (
-      !journal ||
-      journal.missingGrades.length === 0 ||
-      journal.contactLessonsPlanned > journal.entriesInTimetable.length
+        !journal ||
+        journal.missingGrades.length === 0 ||
+        journal.contactLessonsPlanned > journal.entriesInTimetable.length
     )
-      return
+      return;
 
-    const gradingType = journal.gradingType
-    const isNumeric = gradingType === "numeric"
+    const gradingType = journal.gradingType;
+    const isNumeric = gradingType === "numeric";
 
     const missingGradesTable = AssistentDom.createStructure(`
-        <div id="assistent-grades-table-container">
-            <table id="assistent-grades-table" class="assistent-table">
-                <caption>Puuduvad hinded</caption>
-                <thead>
-                    <tr>
-                        <th>Õpiväljund</th>
-                        <th>Hindeta õpilased</th>
-                        <th>Tegevus</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${journal.missingGrades
-                      .map(({ name, code, studentList }) => {
-                        // Check if there is any independent work that should disable the button
-                        const shouldDisableButton =
-                          journal.studentsMissingIndependentWork.some(
-                            (student) =>
-                              student.exerciseList.some((exercise) =>
-                                exercise.learningOutcomes.some(
-                                  (loCode) =>
-                                    exercise.homeworkDuedate &&
-                                    parseInt(loCode.toString(), 10) ===
-                                      parseInt(code, 10)
-                                )
-                              )
-                          )
+      <div id="assistent-grades-table-container">
+          <table id="assistent-grades-table" class="assistent-table">
+              <caption>Puuduvad hinded</caption>
+              <thead>
+                  <tr>
+                      <th>Õpiväljund</th>
+                      <th>Hindeta õpilased</th>
+                      <th>Tegevus</th>
+                  </tr>
+              </thead>
+              <tbody>
+                  ${journal.missingGrades
+        .map(({ name, code, studentList }) => {
+          // Check if there is any independent work that should disable the button
+          const shouldDisableButton = journal.studentsMissingIndependentWork.some(
+              (student) =>
+                  student.exerciseList.some((exercise) =>
+                      exercise.learningOutcomes.includes(parseInt(code, 10))
+                  )
+          );
 
-                        return `
-                                <tr>
-                                    <td class="align-left">${name}</td>
-                                    <td class="align-left">${studentList
-                                      .map(({ name }) => name)
-                                      .join(", ")}</td>
-                                    <td>
-                                        <button class="md-raised md-button md-ink-ripple md-primary" 
-                                            ${
-                                              shouldDisableButton
-                                                ? "disabled"
-                                                : ""
-                                            }>
-                                            ${
-                                              studentList.length > 1
-                                                ? "Lisa hindeid"
-                                                : "Lisa hinne"
-                                            }
-                                        </button>
-                                    </td>
-                                </tr>`
-                      })
-                      .join("")}
-                    <tr>
-                        <td colspan="3" class="align-left">
-                            <input type="radio" id="passFail" name="grading" value="Mitteeristav hindamine" ${
-                              !isNumeric ? "checked" : ""
-                            }>
-                            <label for="passFail">Mitteeristav hindamine${
-                              !isNumeric ? " (vaikimisi)" : ""
-                            }</label>
-                            <br>
-                            <input type="radio" id="numeric" name="grading" value="Eristav hindamine" ${
-                              isNumeric ? "checked" : ""
-                            }>
-                            <label for="numeric">Eristav hindamine${
-                              isNumeric ? " (vaikimisi)" : ""
-                            }</label>
-                            <br>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>`)
+          const tooltipMessage = `On vaja määrata hinded ÕV${code} jaoks`;
 
-    journalHeaderElement.before(missingGradesTable)
+          return `
+                              <tr>
+                                  <td class="align-left">${name}</td>
+                                  <td class="align-left">${studentList
+              .map(({ name }) => name)
+              .join(", ")}</td>
+                                  <td>
+                                      <button class="md-raised md-button md-ink-ripple md-primary" 
+                                          ${shouldDisableButton ? `disabled` : ""}
+                                          ${shouldDisableButton ? `data-tooltip="${tooltipMessage}"` : ""}>
+                                          ${studentList.length > 1 ? "Lisa hindeid" : "Lisa hinne"}
+                                      </button>
+                                  </td>
+                              </tr>`;
+        })
+        .join("")}
+                  <tr>
+                      <td colspan="3" class="align-left">
+                          <input type="radio" id="passFail" name="grading" value="Mitteeristav hindamine" ${!isNumeric ? "checked" : ""}>
+                          <label for="passFail">Mitteeristav hindamine${!isNumeric ? " (vaikimisi)" : ""}</label>
+                          <br>
+                          <input type="radio" id="numeric" name="grading" value="Eristav hindamine" ${isNumeric ? "checked" : ""}>
+                          <label for="numeric">Eristav hindamine${isNumeric ? " (vaikimisi)" : ""}</label>
+                          <br>
+                      </td>
+                  </tr>
+              </tbody>
+          </table>
+      </div>`);
+
+    journalHeaderElement.before(missingGradesTable);
+
+    // Initialize tooltips for disabled buttons
+    document.querySelectorAll('button[disabled][data-tooltip]').forEach(button => {
+      button.addEventListener('mouseover', function() {
+        const tooltipText = this.getAttribute('data-tooltip');
+        const tooltipElement = document.createElement('div');
+        tooltipElement.className = 'custom-tooltip';
+        tooltipElement.innerText = tooltipText;
+        document.body.appendChild(tooltipElement);
+
+        const rect = this.getBoundingClientRect();
+        tooltipElement.style.left = `${rect.left + window.scrollX}px`;
+        tooltipElement.style.top = `${rect.top + window.scrollY - tooltipElement.offsetHeight - 5}px`;
+
+        this.addEventListener('mouseleave', function() {
+          document.body.removeChild(tooltipElement);
+        });
+      });
+    });
 
     // Mark that missing grades table has been injected
-    document
-      .querySelectorAll("#assistent-grades-table button.md-primary")
-      .forEach((button, index) => {
-        button.addEventListener("click", async () => {
-          TahvelJournal.setGradeInputAsSelectToFalse()
-          const gradingType = document.querySelector(
-            'input[name="grading"]:checked'
-          ).id
+    document.querySelectorAll("#assistent-grades-table button.md-primary")
+        .forEach((button, index) => {
+          button.addEventListener("click", async () => {
+            TahvelJournal.setGradeInputAsSelectToFalse();
+            const gradingType = document.querySelector('input[name="grading"]:checked').id;
 
-          TahvelJournal.clickQuickUpdate(`${journal.missingGrades[index].code}`)
+            const code = parseInt(journal.missingGrades[index].code, 10);
+            TahvelJournal.clickQuickUpdate(`${code}`);
 
-          for (const student of journal.missingGrades[index].studentList) {
-            try {
-              const studentGrades = TahvelJournal.getAllGradesForStudent(
-                journal.entriesInJournal,
-                student.id,
-                gradingType
-              )
-              const grade = TahvelJournal.calculateGrade(
-                gradingType,
-                studentGrades
-              )
+            for (const student of journal.missingGrades[index].studentList) {
+              try {
+                const studentGrades = TahvelJournal.getAllGradesForStudent(
+                    journal.entriesInJournal,
+                    student.id,
+                    gradingType,
+                    code
+                );
+                const grade = TahvelJournal.calculateGrade(
+                    gradingType,
+                    studentGrades
+                );
 
-              TahvelJournal.setGradeForStudent(
-                student.studentId,
-                grade.toString()
-              )
-              TahvelJournal.setDateForStudentGrade(
-                student.studentId,
-                new Date()
-              )
+                TahvelJournal.setGradeForStudent(student.studentId, grade.toString());
+                TahvelJournal.setDateForStudentGrade(student.studentId, new Date());
 
-              if ((typeof grade == "number" && grade > 3) || grade === "MA") {
-                TahvelJournal.setCommentForStudentGrade(
-                  student.studentId,
-                  "Grade was negative due to..."
-                )
+                if ((typeof grade == "number" && grade > 3) || grade === "MA") {
+                  TahvelJournal.setCommentForStudentGrade(student.studentId, "Grade was negative due to...");
+                }
+              } catch (error) {
+                console.error(`Error setting grade for student ${student.studentId}:`, error);
               }
-            } catch (error) {
-              console.error(
-                `Error setting grade for student ${student.studentId}:`,
-                error
-              )
             }
-          }
 
-          TahvelJournal.saveGradesForOutcome(journal.missingGrades[index].code)
-        })
-      })
+            TahvelJournal.saveGradesForOutcome(journal.missingGrades[index].code);
+          });
+        });
   }
 
   static async addMissingIndependentWorksTable() {
@@ -537,33 +521,49 @@ class TahvelJournal {
   }
 
   static getAllGradesForStudent(
-    entriesInJournal: AssistentJournalEntry[],
-    studentId: number,
-    gradingType: string
+      entriesInJournal: AssistentJournalEntry[],
+      studentId: number,
+      gradingType: string,
+      learningOutcomeCode: number
   ): number[] {
-    const grades: number[] = []
+    const grades: number[] = [];
 
     for (const journalEntry of entriesInJournal) {
-      const studentResults = journalEntry.journalStudentResults
-        .filter(
-          (result) => result.studentId === studentId && result.gradeNumber > 0
-        )
-        .map((result) => result.gradeNumber)
-
-      if (
-        journalEntry.lessonType === LessonType.independentWork &&
-        studentResults.length === 0
-      ) {
-        if (gradingType !== "numeric") {
-          return [2]
-        } else {
-          studentResults.push(2)
-        }
+      // Ensure that journalEntry.name is not null or undefined before calling match
+      if (!journalEntry.name) {
+        continue; // Skip this journal entry if name is null or undefined
       }
 
-      grades.push(...studentResults)
+      // Extract the ÕV codes from the journalEntry name
+      const learningOutcomeMatches = journalEntry.name.match(/ÕV(\d+)/g);
+      const learningOutcomes = learningOutcomeMatches
+          ? learningOutcomeMatches.map((match) => parseInt(match.replace("ÕV", ""), 10))
+          : [];
+
+      // Check if any of the ÕV codes match the provided learningOutcomeCode
+      if (!learningOutcomes.includes(learningOutcomeCode)) {
+        continue; // Skip this journal entry if there is no match
+      }
+      const studentResults = journalEntry.journalStudentResults
+          .filter(
+              (result) => result.studentId === studentId && result.gradeNumber > 0
+          )
+          .map((result) => result.gradeNumber);
+
+      // if (
+      //     journalEntry.lessonType === LessonType.independentWork &&
+      //     studentResults.length === 0
+      // ) {
+      //   if (gradingType !== "numeric") {
+      //     return [2];
+      //   } else {
+      //     studentResults.push(2);
+      //   }
+      // }
+
+      grades.push(...studentResults);
     }
-    return grades
+    return grades;
   }
 
   static calculateGrade(
@@ -689,10 +689,9 @@ class TahvelJournal {
       name: tr.querySelector("td:nth-child(4)")!.textContent!,
       code: tr.querySelector("td:nth-child(3)")!.textContent!
     }))
+    console.log("learningOutcomes", learningOutcomes)
     if (learningOutcomes.length === 0) return learningOutcomes
-    TahvelJournal.removeGroupNameIfAllOutcomesAreForTheSameGroup(
-      learningOutcomes
-    )
+    TahvelJournal.removeGroupNameIfAllOutcomesAreForTheSameGroup(learningOutcomes)
     return learningOutcomes
   }
 
@@ -708,6 +707,7 @@ class TahvelJournal {
           (outcome.name = outcome.name.replace(/\s*\([^)]*\)\s*$/, "").trim())
       )
     }
+    console.log("outcomes", outcomes)
   }
 
   static async setJournalEntryStartLessonNr(
@@ -1058,33 +1058,34 @@ class TahvelJournal {
     }
 
     return response.content.map((entry) => {
-      // Parse and format the date
-      const dueDate = new Date(entry.homeworkDuedate)
-      const day = String(dueDate.getDate()).padStart(2, "0")
-      const month = String(dueDate.getMonth() + 1).padStart(2, "0") // Months are zero-indexed
-      const year = dueDate.getFullYear()
-      const formattedDate = `${day}.${month}.${year}` // dd.mm.yyyy format
+      // Parse and format the date, unless it's null
+      let formattedDate = null;
+      if (entry.homeworkDuedate) {
+        const dueDate = new Date(entry.homeworkDuedate);
+        const day = String(dueDate.getDate()).padStart(2, "0");
+        const month = String(dueDate.getMonth() + 1).padStart(2, "0"); // Months are zero-indexed
+        const year = dueDate.getFullYear();
+        formattedDate = `${day}.${month}.${year}`; // dd.mm.yyyy format
+      }
 
-      const learningOutcomeMatches = entry.nameEt?.match(/ÕV(\d+)/g)
+      const learningOutcomeMatches = entry.nameEt?.match(/ÕV(\d+)/g);
       const learningOutcomes = learningOutcomeMatches
-        ? learningOutcomeMatches.map((match) =>
-            parseInt(match.replace("ÕV", ""), 10)
-          )
-        : []
+          ? learningOutcomeMatches.map((match) => parseInt(match.replace("ÕV", ""), 10))
+          : [];
 
       return {
         id: entry.id,
         learningOutcomes: learningOutcomes,
         content: entry.content,
         lessonType:
-          entry.entryType === "SISSEKANNE_T"
-            ? LessonType.lesson
-            : entry.entryType === "SISSEKANNE_I"
-            ? LessonType.independentWork
-            : LessonType.other,
-        homeworkDuedate: formattedDate // Set the formatted date here
-      }
-    })
+            entry.entryType === "SISSEKANNE_T"
+                ? LessonType.lesson
+                : entry.entryType === "SISSEKANNE_I"
+                    ? LessonType.independentWork
+                    : LessonType.other,
+        homeworkDuedate: formattedDate // Keep it as null if it was originally null
+      };
+    });
   }
 
   private static async createActionButtonForLessonDiscrepancyAction(
@@ -1184,10 +1185,7 @@ class TahvelJournal {
   }
 
   // eslint-disable-next-line
-  static async fetchJournalEntry(
-    journalId: number,
-    exerciseId: number
-  ): Promise<any> {
+  static async fetchJournalEntry(journalId: number, exerciseId: number): Promise<any> {
     try {
       const response = await AssistentApiClient.get(
         `/journals/${journalId}/journalEntry/${exerciseId}`

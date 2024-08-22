@@ -92,7 +92,7 @@ export enum LessonType {
 
 export interface AssistentLearningOutcomes {
     name: string,
-    code: string,
+    code?: string,
     studentOutcomeResults?: AssistentStudentOutcomeResults[]
 }
 

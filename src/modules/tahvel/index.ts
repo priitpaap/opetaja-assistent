@@ -422,6 +422,17 @@ class Tahvel {
                     justify-content: flex-start;
                     gap: 5px;
                 }
+                .custom-tooltip {
+                    position: absolute;
+                    background-color: #333;
+                    color: #fff;
+                    padding: 5px 10px;
+                    border-radius: 4px;
+                    font-size: 12px;
+                    z-index: 1000;
+                    white-space: nowrap;
+}
+
             </style>`)
     )
   }

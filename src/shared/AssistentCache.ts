@@ -152,62 +152,62 @@ export class AssistentCache {
   }
 
   static findIndependentWorkDiscrepancies(journalId: number) {
-    const journal = AssistentCache.getJournal(journalId)
-    const missingIndependentWork: AssistentStudentsWithoutIndependentWork[] = []
+    const journal = AssistentCache.getJournal(journalId);
+    const missingIndependentWork: AssistentStudentsWithoutIndependentWork[] = [];
 
-    if (!journal) return []
+    if (!journal) return [];
 
     // Helper function to parse 'dd.mm.yyyy' format to Date object
     function parseDate(dateStr: string): Date | null {
-      if (!dateStr) return null
-      const [day, month, year] = dateStr.split(".").map(Number)
-      return new Date(year, month - 1, day) // month is zero-indexed
+      if (!dateStr) return null;
+      const [day, month, year] = dateStr.split(".").map(Number);
+      return new Date(year, month - 1, day); // month is zero-indexed
     }
 
     // Helper function to check if a date has passed
-    function isDatePassed(dueDateStr: string): boolean {
-      const dueDate = parseDate(dueDateStr)
-      if (!dueDate) return false
-      const today = new Date()
+    function isDatePassed(dueDateStr: string | null): boolean {
+      const dueDate = parseDate(dueDateStr);
+      if (!dueDate) return false; // If dueDate is null, consider it as not passed
+      const today = new Date();
       // Compare only the date parts, ignoring the time
       return (
-        dueDate <
-        new Date(today.getFullYear(), today.getMonth(), today.getDate())
-      )
+          dueDate <
+          new Date(today.getFullYear(), today.getMonth(), today.getDate())
+      );
     }
 
     journal.students.forEach((student) => {
-      const studentMissingWorks: AssistentExerciseListEntry[] = []
+      const studentMissingWorks: AssistentExerciseListEntry[] = [];
 
       journal.exercisesLists.forEach((exercise) => {
         if (exercise.lessonType === LessonType.independentWork) {
-          const isDueDatePassed = isDatePassed(exercise.homeworkDuedate)
+          const isDueDatePassed = isDatePassed(exercise.homeworkDuedate);
           const hasGrade = journal.entriesInJournal.some((entry) =>
-            entry.journalStudentResults.some(
-              (result) =>
-                result.studentId === student.id &&
-                result.gradeCode &&
-                exercise.id === entry.id
-            )
-          )
+              entry.journalStudentResults.some(
+                  (result) =>
+                      result.studentId === student.id &&
+                      result.gradeCode &&
+                      exercise.id === entry.id
+              )
+          );
 
-          // Add the exercise to the missing list if the grade is missing and the due date is past or not set
+          // Add the exercise to the missing list if the grade is missing and the due date is passed or not set
           if (!hasGrade && (isDueDatePassed || !exercise.homeworkDuedate)) {
-            studentMissingWorks.push(exercise)
+            studentMissingWorks.push(exercise);
           }
         }
-      })
+      });
 
       if (studentMissingWorks.length > 0) {
         missingIndependentWork.push({
           studentId: student.id,
           name: student.name,
           exerciseList: studentMissingWorks
-        })
+        });
       }
-    })
+    });
 
-    journal.studentsMissingIndependentWork = missingIndependentWork
+    journal.studentsMissingIndependentWork = missingIndependentWork;
   }
 
   static findJournalLessonsDifferencesFact(id: number) {
@@ -222,7 +222,7 @@ export class AssistentCache {
     ) {
       journal.lessonMissing = true
     }
-
+    
     // if ((differencesToTimetable.timetableFirstLessonStartNumber <> differencesToTimetable.journalFirstLessonStartNumber) or (differencesToTimetable.journalLessonCount <> differencesToTimetable.timetableLessonCount)) or (differencesToTimetable.journalLessonCount > 0 and differencesToTimetable.timetableLessonCount = 0)
     // then set lessonDiscrepancies to true
     if (
