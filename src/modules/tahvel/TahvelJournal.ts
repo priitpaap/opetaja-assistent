@@ -199,56 +199,79 @@ class TahvelJournal {
 
     const gradingType = journal.gradingType
     const isNumeric = gradingType === "numeric"
+
     const missingGradesTable = AssistentDom.createStructure(`
-            <div id="assistent-grades-table-container">
-                <table id="assistent-grades-table" class="assistent-table">
-                    <caption>Puuduvad hinded</caption>
-                    <thead>
-                        <tr>
-                            <th>Õpiväljund</th>
-                            <th>Hindeta õpilased</th>
-                            <th>Tegevus</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${journal.missingGrades
-                          .map(
-                            ({ name, studentList }) => `
-                            <tr>
-                                <td class="align-left">${name}</td>
-                                <td class="align-left">${studentList
-                                  .map(({ name }) => name)
-                                  .join(", ")}</td>
-                                <td><button class="md-raised md-button md-ink-ripple md-primary">${
-                                  studentList.length > 1
-                                    ? "Lisa hindeid"
-                                    : "Lisa hinne"
-                                }</button></td>
-                            </tr>
-                        `
+        <div id="assistent-grades-table-container">
+            <table id="assistent-grades-table" class="assistent-table">
+                <caption>Puuduvad hinded</caption>
+                <thead>
+                    <tr>
+                        <th>Õpiväljund</th>
+                        <th>Hindeta õpilased</th>
+                        <th>Tegevus</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${journal.missingGrades
+                      .map(({ name, code, studentList }) => {
+                        // Check if there is any independent work that should disable the button
+                        const shouldDisableButton =
+                          journal.studentsMissingIndependentWork.some(
+                            (student) =>
+                              student.exerciseList.some((exercise) =>
+                                exercise.learningOutcomes.some(
+                                  (loCode) =>
+                                    exercise.homeworkDuedate &&
+                                    parseInt(loCode.toString(), 10) ===
+                                      parseInt(code, 10)
+                                )
+                              )
                           )
-                          .join("")}
-                        <tr>
-                            <td colspan="3" class="align-left">
-                                <input type="radio" id="passFail" name="grading" value="Mitteeristav hindamine" ${
-                                  !isNumeric ? "checked" : ""
-                                }>
-                                <label for="passFail">Mitteeristav hindamine${
-                                  !isNumeric ? " (vaikimisi)" : ""
-                                }</label>
-                                <br>
-                                <input type="radio" id="numeric" name="grading" value="Eristav hindamine" ${
-                                  isNumeric ? "checked" : ""
-                                }>
-                                <label for="numeric">Eristav hindamine${
-                                  isNumeric ? " (vaikimisi)" : ""
-                                }</label>
-                                <br>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>`)
+
+                        return `
+                                <tr>
+                                    <td class="align-left">${name}</td>
+                                    <td class="align-left">${studentList
+                                      .map(({ name }) => name)
+                                      .join(", ")}</td>
+                                    <td>
+                                        <button class="md-raised md-button md-ink-ripple md-primary" 
+                                            ${
+                                              shouldDisableButton
+                                                ? "disabled"
+                                                : ""
+                                            }>
+                                            ${
+                                              studentList.length > 1
+                                                ? "Lisa hindeid"
+                                                : "Lisa hinne"
+                                            }
+                                        </button>
+                                    </td>
+                                </tr>`
+                      })
+                      .join("")}
+                    <tr>
+                        <td colspan="3" class="align-left">
+                            <input type="radio" id="passFail" name="grading" value="Mitteeristav hindamine" ${
+                              !isNumeric ? "checked" : ""
+                            }>
+                            <label for="passFail">Mitteeristav hindamine${
+                              !isNumeric ? " (vaikimisi)" : ""
+                            }</label>
+                            <br>
+                            <input type="radio" id="numeric" name="grading" value="Eristav hindamine" ${
+                              isNumeric ? "checked" : ""
+                            }>
+                            <label for="numeric">Eristav hindamine${
+                              isNumeric ? " (vaikimisi)" : ""
+                            }</label>
+                            <br>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>`)
 
     journalHeaderElement.before(missingGradesTable)
 
@@ -317,7 +340,7 @@ class TahvelJournal {
       return
 
     const journal = await TahvelJournal.getJournalWithValidation()
-    if (!journal || journal.missingIndependentWork.length === 0) return
+    if (!journal || journal.studentsMissingIndependentWork.length === 0) return
 
     // Create the table structure
     const missingIndependentWorksTable = AssistentDom.createStructure(`
@@ -336,13 +359,14 @@ class TahvelJournal {
                   </tr>
               </thead>
               <tbody>
-                  ${journal.missingIndependentWork
+                  ${journal.studentsMissingIndependentWork
                     .map(({ name, exerciseList, studentId }) =>
                       exerciseList
                         .map((exercise) => {
-                          // Join the learning outcomes into a string separated by commas
-                          const learningOutcomes =
-                            exercise.learningOutcome.join(", ")
+                          // Map the learning outcomes to the "ÕV" prefix and join them into a string
+                          const learningOutcomes = exercise.learningOutcomes
+                            .map((lo) => `ÕV${lo}`)
+                            .join(", ")
 
                           return `
                   <tr>
@@ -556,7 +580,7 @@ class TahvelJournal {
     if (gradingType === "numeric") {
       return Math.round(averageGrade)
     } else {
-      return averageGrade >= 3 ? "A" : "MA"
+      return averageGrade >= 2.5 ? "A" : "MA"
     }
   }
 
@@ -1042,10 +1066,15 @@ class TahvelJournal {
       const formattedDate = `${day}.${month}.${year}` // dd.mm.yyyy format
 
       const learningOutcomeMatches = entry.nameEt?.match(/ÕV(\d+)/g)
+      const learningOutcomes = learningOutcomeMatches
+        ? learningOutcomeMatches.map((match) =>
+            parseInt(match.replace("ÕV", ""), 10)
+          )
+        : []
 
       return {
         id: entry.id,
-        learningOutcome: learningOutcomeMatches ?? [],
+        learningOutcomes: learningOutcomes,
         content: entry.content,
         lessonType:
           entry.entryType === "SISSEKANNE_T"

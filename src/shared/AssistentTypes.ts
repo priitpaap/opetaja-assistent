@@ -7,7 +7,7 @@ export interface AssistentJournal {
   differencesToTimetable: AssistentJournalDifference[]
   students: AssistentStudent[]
   learningOutcomes: AssistentLearningOutcomes[]
-  missingIndependentWork: AssistentStudentsWithoutIndependentWork[]
+  studentsMissingIndependentWork: AssistentStudentsWithoutIndependentWork[]
   missingGrades: AssistentStudentsWithoutGrades[]
   independentWorkPlanned: number
   independentWorkGiven: number
@@ -50,7 +50,7 @@ export interface AssistentJournalDifference {
 
 export interface AssistentExerciseListEntry {
   id: number
-  learningOutcome: string[]
+  learningOutcomes: number[]
   content: string
   lessonType: LessonType
   homeworkDuedate: string

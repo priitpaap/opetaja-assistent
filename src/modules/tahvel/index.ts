@@ -178,7 +178,7 @@ class Tahvel {
           learningOutcomes: [],
           missingGrades: [],
           exercisesLists: [],
-          missingIndependentWork: [],
+          studentsMissingIndependentWork: [],
           contactLessonsPlanned: null,
           independentWorkPlanned: null,
           contactLessonsGiven: null,
