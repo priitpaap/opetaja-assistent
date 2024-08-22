@@ -1,21 +1,12 @@
 import { DateTime } from 'luxon';
-
-
-
 import Api from "~src/shared/AssistentApiClient";
 import AssistentApiClient from "~src/shared/AssistentApiClient";
 import AssistentCache from "~src/shared/AssistentCache";
 import { AssistentDetailedError } from "~src/shared/AssistentDetailedError";
 import AssistentDom from "~src/shared/AssistentDom";
 import { type AssistentExerciseListEntry, type AssistentJournal, type AssistentJournalDifference, type AssistentJournalEntry, type AssistentLearningOutcomes, LessonType } from "~src/shared/AssistentTypes";
-
-
-
 import TahvelDom from "./TahvelDom";
 import { type apiCurriculumModuleEntry, type apiExercisesListEntry, type apiJournalEntry, type apiStudentOutcomeEntry } from "./TahvelTypes";
-
-
-
 
 
 class TahvelJournal {
