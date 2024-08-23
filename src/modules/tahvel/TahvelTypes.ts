@@ -19,6 +19,7 @@ export interface apiJournalEntry {
 
 export interface apiExercisesListEntry {
   nameEt: string
+  entryDate: string
   content: string
   entryType: string
   id: number

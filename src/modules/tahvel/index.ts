@@ -56,6 +56,13 @@ class Tahvel {
       urlFragment: new RegExp(urlForJournalEdit),
       elementToWaitFor: elementInJournalEdit,
       action: TahvelJournal.addMissingGradesTable
+    },
+    {
+      description:
+          "Color the the cells in the journal entries table based on missing independent works",
+      urlFragment: new RegExp(urlForJournalEdit),
+      elementToWaitFor: elementInJournalEdit,
+      action: TahvelJournal.colorJournalEntryCell
     }
   ]
 
