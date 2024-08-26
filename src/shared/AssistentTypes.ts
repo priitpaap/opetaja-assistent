@@ -92,13 +92,16 @@ export enum LessonType {
 }
 
 export interface AssistentLearningOutcomes {
+    curriculumModuleOutcomes: number,
     name: string,
     code?: string,
     studentOutcomeResults?: AssistentStudentOutcomeResults[]
 }
 
 export interface AssistentStudentOutcomeResults {
+    id: number
     studentId: number
+    gradeNumber: number
 }
 
 export interface AssistentStudentEntryResults {
@@ -108,6 +111,7 @@ export interface AssistentStudentEntryResults {
 }
 
 export interface AssistentStudentsWithoutGrades {
+    curriculumModuleOutcomes: number,
     name: string,
     code: string,
     studentList: AssistentStudent[]

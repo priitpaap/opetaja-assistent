@@ -45,17 +45,10 @@ class Tahvel {
     },
     {
       description:
-        "Inject alerts to journal pages when there are missing independent works",
+        "Inject grading options to journal pages when there are missing grades",
       urlFragment: new RegExp(urlForJournalEdit),
       elementToWaitFor: elementInJournalEdit,
-      action: TahvelJournal.addMissingIndependentWorksTable
-    },
-    {
-      description:
-        "Inject alerts to journal pages when there are missing grades",
-      urlFragment: new RegExp(urlForJournalEdit),
-      elementToWaitFor: elementInJournalEdit,
-      action: TahvelJournal.addMissingGradesTable
+      action: TahvelJournal.addGradingOptionsAndUpdateGrades
     },
     {
       description:
@@ -65,6 +58,7 @@ class Tahvel {
       action: TahvelJournal.colorJournalEntryCell
     }
   ]
+
 
   /** Sets up API URL, fetches data, fills the cache with data, and enhances SPA navigation */
   static async init(): Promise<void> {
@@ -209,7 +203,6 @@ class Tahvel {
       journal.exercisesLists = await TahvelJournal.fetchExercisesLists(
         journal.id
       )
-      console.log(journal.exercisesLists)
 
       let response: apiJournalInfoEntry
       try {

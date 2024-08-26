@@ -51,6 +51,7 @@ export interface apiCurriculumModuleEntry {
 }
 
 export interface apiStudentOutcomeEntry {
+    id: number;
     studentId: number;
     grade:  apiGradeEntryGrade
 }

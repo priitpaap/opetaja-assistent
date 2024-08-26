@@ -126,6 +126,7 @@ export class AssistentCache {
       // iterate over curriculumModules and find the discrepancies of studentOutcomeResults and students
       for (const curriculumModule of journal.learningOutcomes) {
         const missingGradesForModule: AssistentStudentsWithoutGrades = {
+          curriculumModuleOutcomes: curriculumModule.curriculumModuleOutcomes,
           name: curriculumModule.name,
           code: curriculumModule.code,
           studentList: []
