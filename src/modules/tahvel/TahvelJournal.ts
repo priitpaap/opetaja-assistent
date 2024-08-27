@@ -180,164 +180,6 @@ class TahvelJournal {
     journalHeaderElement.dataset.lessonDiscrepanciesTableIsInjected = "true"
   }
 
-  static async addMissingGradesTable() {
-    const journalHeaderElement = document.querySelector(
-      'div[ng-if="journal.hasJournalStudents"]'
-    )
-    if (
-      !journalHeaderElement ||
-      journalHeaderElement.getAttribute(
-        "data-lesson-discrepancies-table-is-injected"
-      ) === "true"
-    )
-      return
-
-    const journal = await TahvelJournal.getJournalWithValidation()
-    if (
-      !journal ||
-      journal.missingGrades.length === 0 ||
-      journal.contactLessonsPlanned > journal.entriesInTimetable.length
-    )
-      return
-
-    const gradingType = journal.gradingType
-    const isNumeric = gradingType === "numeric"
-
-    const missingGradesTable = AssistentDom.createStructure(`
-      <div id="assistent-grades-table-container">
-          <table id="assistent-grades-table" class="assistent-table">
-              <caption>Puuduvad hinded</caption>
-              <thead>
-                  <tr>
-                      <th>Õpiväljund</th>
-                      <th>Hindeta õpilased</th>
-                      <th>Tegevus</th>
-                  </tr>
-              </thead>
-              <tbody>
-                  ${journal.missingGrades
-                    .map(({ name,studentList }) => {
-                      // Check if there is any independent work that should disable the button
-                      return`
-                              <tr>
-                                  <td class="align-left">${name}</td>
-                                  <td class="align-left">${studentList
-                                    .map(({ name }) => name)
-                                    .join(", ")}</td>
-                                  <td>
-                                      <button class="md-raised md-button md-ink-ripple md-primary" 
-                                     
-                                          ${
-                                            studentList.length > 1
-                                              ? "Lisa hindeid"
-                                              : "Lisa hinne"
-                                          }
-                                      </button>
-                                  </td>
-                              </tr>`
-                    })
-                    .join("")}
-                  <tr>
-                      <td colspan="3" class="align-left">
-                          <input type="radio" id="passFail" name="grading" value="Mitteeristav hindamine" ${
-                            !isNumeric ? "checked" : ""
-                          }>
-                          <label for="passFail">Mitteeristav hindamine${
-                            !isNumeric ? " (vaikimisi)" : ""
-                          }</label>
-                          <br>
-                          <input type="radio" id="numeric" name="grading" value="Eristav hindamine" ${
-                            isNumeric ? "checked" : ""
-                          }>
-                          <label for="numeric">Eristav hindamine${
-                            isNumeric ? " (vaikimisi)" : ""
-                          }</label>
-                          <br>
-                      </td>
-                  </tr>
-              </tbody>
-          </table>
-      </div>`)
-
-    journalHeaderElement.before(missingGradesTable)
-
-    // Initialize tooltips for disabled buttons
-    // document
-    //   .querySelectorAll("button[disabled][data-tooltip]")
-    //   .forEach((button) => {
-    //     button.addEventListener("mouseover", function () {
-    //       const tooltipText = this.getAttribute("data-tooltip")
-    //       const tooltipElement = document.createElement("div")
-    //       tooltipElement.className = "custom-tooltip"
-    //       tooltipElement.innerText = tooltipText
-    //       document.body.appendChild(tooltipElement)
-    //
-    //       const rect = this.getBoundingClientRect()
-    //       tooltipElement.style.left = `${rect.left + window.scrollX}px`
-    //       tooltipElement.style.top = `${
-    //         rect.top + window.scrollY - tooltipElement.offsetHeight - 5
-    //       }px`
-    //
-    //       this.addEventListener("mouseleave", function () {
-    //         document.body.removeChild(tooltipElement)
-    //       })
-    //     })
-    //   })
-
-
-    // Mark that missing grades table has been injected
-    document
-      .querySelectorAll("#assistent-grades-table button.md-primary")
-      .forEach((button, index) => {
-        button.addEventListener("click", async () => {
-          TahvelJournal.setGradeInputAsSelectToFalse()
-          const gradingType = document.querySelector(
-            'input[name="grading"]:checked'
-          ).id
-
-          const code = parseInt(journal.missingGrades[index].code, 10)
-          TahvelJournal.clickQuickUpdate(`${code}`)
-
-          for (const student of journal.missingGrades[index].studentList) {
-            try {
-              const studentGrades = TahvelJournal.getAllGradesForStudent(
-                journal.entriesInJournal,
-                student.id,
-                gradingType,
-                code
-              )
-              const grade = TahvelJournal.calculateGrade(
-                gradingType,
-                studentGrades
-              )
-
-              TahvelJournal.setGradeForStudent(
-                student.studentId,
-                grade.toString()
-              )
-              TahvelJournal.setDateForStudentGrade(
-                student.studentId,
-                new Date()
-              )
-
-              if ((typeof grade == "number" && grade > 3) || grade === "MA") {
-                TahvelJournal.setCommentForStudentGrade(
-                  student.studentId,
-                  "Grade was negative due to..."
-                )
-              }
-            } catch (error) {
-              console.error(
-                `Error setting grade for student ${student.studentId}:`,
-                error
-              )
-            }
-          }
-
-          // TahvelJournal.saveGradesForOutcome(journal.missingGrades[index].code)
-        })
-      })
-  }
 
 
   static async addGradingOptionsAndUpdateGrades() {
@@ -365,27 +207,29 @@ class TahvelJournal {
       console.error("Target element 'journalEntriesByDate' not found.");
       return;
     }
-
-    await TahvelJournal.checkAndHighlightGrades();
-
-
     const gradingType = journal.gradingType; // This will be 'numeric' or 'passFail'
 
     // Determine which option should be selected based on the grading type
     const isPassFail = gradingType === "passFail";
     const isNumeric = gradingType === "numeric";
 
+    // Set the default text for each option and append "(vaikimisi)" if it's the selected one
+    const passFailText = `Mitteeristav hindamine${isPassFail ? " (vaikimisi)" : ""}`;
+    const numericText = `Eristav hindamine${isNumeric ? " (vaikimisi)" : ""}`;
+
+    // Create the custom div element and set its inner HTML
     const customDiv = document.createElement('div');
     customDiv.innerHTML = `
-  <div id="custom-options-container" style="margin-top: 20px; display: flex; justify-content: flex-end;">
-    <select id="gradingTypeSelect">
-      <option value="passFail" ${isPassFail ? "selected" : ""}>Mitteeristav hindamine</option>
-      <option value="numeric" ${isNumeric ? "selected" : ""}>Eristav hindamine</option>
-    </select>
-    <button id="update-grades-btn" class="md-raised md-button md-ink-ripple md-primary" style="margin-left: 10px;">
-      Lisa/Uuenda hindeid
-    </button>
-  </div>
+    <div id="custom-options-container" style="margin-top: 20px; display: flex; justify-content: flex-end;">
+      <select id="gradingTypeSelect" style="width: 150px; height: 35px; font-size: 15px; padding: 2px; margin: 5px; border-radius: 4px; border: 1px solid #ccc;">
+        <option value="empty" selected></option>
+        <option value="passFail">${passFailText}</option>
+        <option value="numeric">${numericText}</option>
+      </select>
+      <button id="update-grades-btn" class="md-raised md-button md-ink-ripple md-primary" style="margin-left: 10px;">
+        Lisa/Uuenda hindeid
+      </button>
+    </div>
   `;
 
     // Insert the new div after the target element
@@ -550,8 +394,6 @@ class TahvelJournal {
         : Math.ceil(averageGrade)
     } else {
       const minGrade = Math.min(...grades)
-
-      console.log("minGrade", minGrade)
       return minGrade < 3 ? "MA" : "A"
     }
   }
@@ -1007,7 +849,6 @@ class TahvelJournal {
         }))
       }))
 
-
     return {
       entries,
       learningOutcomes
@@ -1203,82 +1044,59 @@ class TahvelJournal {
     );
     if (!journal || !journal.exercisesLists) return;
 
-    async function updateJournal() {
-      journal.exercisesLists = await TahvelJournal.fetchExercisesLists(journal.id);
-      colorCells(); // Reapply color after updating exercisesLists
-    }
-
-    function colorCells() {
-      const headers = Array.from(document.querySelectorAll("th")).filter((th) => {
-        const ariaLabel = th.querySelector("div[aria-label]")?.getAttribute("aria-label");
-        return ariaLabel && /ÕV\d+/.test(ariaLabel);
-      });
-
-      headers.forEach((header) => {
-        const headerIndex = Array.from(header.parentElement.children).indexOf(header);
-        const headerDateText = header.querySelector("span")?.textContent.trim();
-
-        journal.exercisesLists.forEach((exercise) => {
-          // If the lesson type is 'lesson', skip to the next exercise
-          if (exercise.lessonType === LessonType.lesson) {
-            return; // Skip to the next exercise
-          }
-
-          // Extract the date without year from exercise.entryDate (dd.mm.yyyy)
-          const [exerciseDay, exerciseMonth] = exercise.entryDate.split(".");
-          const exerciseDate = `${exerciseDay}.${exerciseMonth}`;
-
-          if (headerDateText === exerciseDate) {
-            const rows = document.querySelectorAll(
-                'tr[ng-repeat="row in journal.journalStudents"]'
-            );
-
-            rows.forEach((row) => {
-              const cell = row.children[headerIndex] as HTMLElement;
-
-              if (cell && (!cell.textContent || cell.textContent.trim() === "")) {
-                // Check if the homework due date is in the future
-                let isHomeworkDueInFuture = false;
-                if (exercise.homeworkDuedate) {
-                  const [dueDay, dueMonth, dueYear] = exercise.homeworkDuedate
-                      .split(".")
-                      .map(Number);
-                  const homeworkDueDate = new Date(dueYear, dueMonth - 1, dueDay);
-
-                  isHomeworkDueInFuture = homeworkDueDate > new Date();
-                }
-
-                // Apply color based on conditions
-                if (!isHomeworkDueInFuture || !exercise.homeworkDuedate) {
-                  cell.style.backgroundColor = "#ea8080"; // Color cell only if homework due date is not in the future or is null
-                }
-              }
-            });
-          }
-        });
-      });
-    }
-
     // Initial cell coloring
-    colorCells();
+    TahvelJournal.colorCells(journal);
 
-    const observer = new MutationObserver(async () => {
-      await updateJournal(); // Update exercisesLists and recolor cells
-    });
+    // Initial grade check and highlighting
+    await TahvelJournal.checkAndHighlightGrades();
+
+    // Define observer callback function to update and recolor
+    const observerCallback = async (mutationsList: MutationRecord[]) => {
+      for (const mutation of mutationsList) {
+        if (
+            mutation.type === "childList" ||
+            (mutation.type === "attributes" && mutation.attributeName !== "style" && mutation.attributeName !== "class")
+        ) {
+          // Only trigger update if mutation is not related to scrolling
+          await TahvelJournal.updateJournal(journal); // Update exercisesLists and recolor cells
+        }
+      }
+    };
+
+    const observer = new MutationObserver(observerCallback);
 
     observer.observe(table, {
       childList: true, // Watch for changes to the child elements
       subtree: true, // Watch for changes to all descendant elements
-      characterData: true, // Watch for changes to text content
-      attributes: true, // Watch for changes to attributes like classes, styles, etc.
-      attributeFilter: ["class", "style"], // Specifically monitor these attributes
+      characterData: false, // Disable watching for changes to text content
+      attributes: true, // Watch for changes to attributes
+      attributeFilter: ["class", "style", "aria-*"], // Specifically monitor these attributes, but not those related to scrolling
     });
   }
 
+
   static async checkAndHighlightGrades() {
+
+    if (typeof chrome !== "undefined" && chrome.storage) {
+      console.log("Running in Isolated World: Extension APIs are available.");
+    } else {
+      console.log("Running in Main World: Extension APIs are not available.");
+    }
+
     // Step 1: Fetch the journal data
     const journal = await TahvelJournal.getJournalWithValidation();
     if (!journal) return;
+
+    // Check if all planned work is given
+    const AllLessonsGiven = journal.contactLessonsGiven - journal.contactLessonsPlanned >= -1 ;
+
+    // Get the last date from entriesInTimetable and format it
+    const lastTimetableEntry = journal.entriesInTimetable[journal.entriesInTimetable.length - 1];
+    const formattedDate = new Date(lastTimetableEntry.date).toLocaleDateString('et-EE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
 
     // Step 2: Find all headers with a class 'journal-entry-button pointer' that contain 'ÕV' + outcomeCode
     journal.learningOutcomes.forEach(outcome => {
@@ -1294,56 +1112,99 @@ class TahvelJournal {
 
       const headerIndex = Array.from(header.parentElement.children).indexOf(header);
 
-      // Step 3: Iterate through each student result for the current learning outcome
-      outcome.studentOutcomeResults?.forEach(result => {
-        const studentRow = TahvelJournal.findTableRowById(result.studentId);
+      // Step 3: Iterate through each student in journal.students
+      journal.students.forEach(student => {
+        const studentRow = TahvelJournal.findTableRowById(student.studentId);
 
         if (!studentRow) {
-          console.log(`No matching row found for studentId ${result.studentId}`);
+          console.log(`No matching row found for studentId ${student.studentId}`);
           return; // Skip if no matching row is found for the student
         }
 
         const cell = studentRow.children[headerIndex] as HTMLElement;
 
         if (!cell) {
-          console.log(`No matching cell found for studentId ${result.studentId} at header index ${headerIndex}`);
+          console.log(`No matching cell found for studentId ${student.studentId} at header index ${headerIndex}`);
           return; // Skip if no cell found
-        }
-
-        // Find the student entry in journal.students where studentId matches result.studentId
-        const studentEntry = journal.students.find(student => student.studentId === result.studentId);
-
-        if (!studentEntry) {
-          console.log(`No matching student found for studentId ${result.studentId}`);
-          return; // Skip if no matching student entry is found
         }
 
         // Calculate the student's average grade for this outcome
         const studentGrades = TahvelJournal.getAllGradesForStudent(
             journal.entriesInJournal,
-            studentEntry.id, // Use the `id` from the found student entry
+            student.id, // Use the `id` from the student entry
             journal.gradingType,
             outcomeCode
         );
 
-        if (studentGrades.length > 0) {
+
+        // Check if this student is missing any independent work for this learning outcome
+        const notAllFinished = journal.studentsMissingIndependentWork.some(studentMissing =>
+            studentMissing.studentId === student.id &&
+            studentMissing.exerciseList.some(exercise =>
+                exercise.learningOutcomes.includes(outcomeCode)
+            )
+        );
+
+        // Check if grades can be assigned
+        const canAssignGrade = !notAllFinished && studentGrades.length > 0;
+
+        if (notAllFinished) {
+          if (AllLessonsGiven) {
+            cell.style.backgroundColor = "#ea8080"; // Red color when not all work is finished
+            cell.setAttribute('data-tooltip', `Õpiväljundi hinded tuleb välja panna ${formattedDate}`);
+            cell.classList.add('tooltip-container');
+          } else {
+            // Light yellow color when not all work is finished and not all lessons are given
+            cell.style.backgroundColor = "rgb(255, 236, 179)";
+            cell.setAttribute('data-tooltip', `Õpiväljundi hindamine on veel pooleli`);
+            cell.classList.add('tooltip-container');
+          }
+          return; // If not all work is finished, skip further processing
+        }
+
+        if (canAssignGrade) {
           const calculatedGrade = TahvelJournal.calculateGrade(journal.gradingType, studentGrades);
 
-          // Compare with the stored grade number
-          if (calculatedGrade !== result.gradeNumber) {
-            console.log(`Incorrect grade found for student ${result.studentId}. Calculated: ${calculatedGrade}, Expected: ${result.gradeNumber}`);
+          // Find the result for the current student and outcome
+          const result = outcome.studentOutcomeResults?.find(res => res.studentId === student.studentId);
 
-            // Apply color to the correct element inside the cell
-            cell.style.backgroundColor = "#ea8080"; // Red color for incorrect grades
+          if (!result) {
+
+            if (AllLessonsGiven) {
+              cell.style.backgroundColor = "#ea8080"; // Red color when all planned work is given but no grade is set
+              cell.setAttribute('data-tooltip', `Õpiväljundi hinded tuleb välja panna ${formattedDate}`);
+              cell.classList.add('tooltip-container');
+            } else {
+              cell.style.backgroundColor = "rgb(197, 202, 233)"; // Light blue color when no grade is set, but all work is completed
+              cell.setAttribute('data-tooltip', `Võib panna ${calculatedGrade}`);
+              cell.classList.add('tooltip-container');
+            }
+          } else if (calculatedGrade !== result.gradeNumber) {
+            // If the grade is incorrect
+            cell.style.backgroundColor = "rgb(252, 228, 236)"; // Orange color for incorrect grades
+            cell.setAttribute('data-tooltip', `Peab olema ${calculatedGrade}`);
+            cell.classList.add('tooltip-container');
+          } else {
+            // If the grade is correct
+            cell.style.backgroundColor = "#ffffff"; // Default color for correct grades
+            cell.removeAttribute('data-tooltip');
+            cell.classList.remove('tooltip-container');
           }
 
         } else {
-          // If there are no grades, the cell is not highlighted
-          console.log(`No grades found for student ${result.studentId} for learning outcome ${outcomeCode}`);
+          // If there are no grades, apply the appropriate color
+          if (AllLessonsGiven) {
+            cell.style.backgroundColor = "#ea8080"; // Red color for cells without a grade when all lessons are given
+          } else {
+            cell.style.backgroundColor = "rgb(255, 236, 179)"; // Light yellow color if grades cannot be assigned yet
+          }
+          cell.setAttribute('data-tooltip', `Õpiväljundi hindamine on veel pooleli`);
+          cell.classList.add('tooltip-container');
         }
       });
     });
   }
+
 
   //eslint-disable-next-line
   static async fetchJournalOutcome(journalId: number, outcomeId: number): Promise<any> {
@@ -1358,7 +1219,95 @@ class TahvelJournal {
     }
   }
 
+  private static colorCells(journal) {
+    const headers = Array.from(document.querySelectorAll("th")).filter((th) => {
+      const ariaLabel = th.querySelector("div[aria-label]")?.getAttribute("aria-label");
+      return ariaLabel && /ÕV\d+/.test(ariaLabel);
+    });
 
+    headers.forEach((header) => {
+      const headerIndex = Array.from(header.parentElement.children).indexOf(header);
+      const headerDateText = header.querySelector("span")?.textContent.trim();
+
+      journal.exercisesLists.forEach((exercise) => {
+        if (exercise.lessonType === LessonType.lesson) {
+          return; // Skip to the next exercise
+        }
+
+        // Extract the date without year from exercise.entryDate (dd.mm.yyyy)
+        const [exerciseDay, exerciseMonth] = exercise.entryDate.split(".");
+        const exerciseDate = `${exerciseDay}.${exerciseMonth}`;
+
+        if (headerDateText === exerciseDate) {
+          const rows = document.querySelectorAll(
+              'tr[ng-repeat="row in journal.journalStudents"]'
+          );
+
+          rows.forEach((row) => {
+            const cell = row.children[headerIndex] as HTMLElement;
+
+            if (cell && (!cell.textContent || !/\d/.test(cell.textContent.trim()))) {
+              // Check if the homework due date is in the future
+              let isHomeworkDueInFuture = false;
+              if (exercise.homeworkDuedate) {
+                const [dueDay, dueMonth, dueYear] = exercise.homeworkDuedate
+                    .split(".")
+                    .map(Number);
+                const homeworkDueDate = new Date(dueYear, dueMonth - 1, dueDay);
+
+                isHomeworkDueInFuture = homeworkDueDate > new Date();
+              }
+
+              // Apply color based on conditions
+              if (!isHomeworkDueInFuture || !exercise.homeworkDuedate) {
+                cell.style.backgroundColor = "#ea8080"; // Color cell only if homework due date is not in the future or is null
+
+                // Add tooltip for red background
+                cell.addEventListener('mouseenter', () => {
+                  TahvelJournal.showTooltip(cell, "Iseseisva töö hinne puudub");
+                });
+
+                cell.addEventListener('mouseleave', () => {
+                  TahvelJournal.hideTooltip();
+                });
+              }
+            }
+          });
+        }
+      });
+    });
+  }
+
+
+  private static async updateJournal(journal) {
+    journal.exercisesLists = await TahvelJournal.fetchExercisesLists(journal.id);
+    const data = await TahvelJournal.fetchJournalData(journal.id);
+    journal.learningOutcomes= data.learningOutcomes;
+    journal.entriesInJournal = data.entries;
+    TahvelJournal.colorCells(journal);
+    AssistentCache.findIndependentWorkDiscrepancies(journal.id)
+    await TahvelJournal.checkAndHighlightGrades()// Reapply color after updating exercisesLists
+  }
+
+  // Function to create and show tooltip
+  private static showTooltip(targetElement: HTMLElement, message: string) {
+    const tooltip = document.createElement('div');
+    tooltip.className = 'custom-tooltip';
+    tooltip.textContent = message;
+    document.body.appendChild(tooltip);
+
+    const rect = targetElement.getBoundingClientRect();
+    tooltip.style.left = `${rect.left + window.scrollX + targetElement.offsetWidth / 2 - tooltip.offsetWidth / 2}px`;
+    tooltip.style.top = `${rect.top + window.scrollY - tooltip.offsetHeight - 5}px`;
+  }
+
+  // Function to hide tooltip
+  private static hideTooltip() {
+    const tooltip = document.querySelector('.custom-tooltip');
+    if (tooltip) {
+      tooltip.remove();
+    }
+  }
 
 }
 

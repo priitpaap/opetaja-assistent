@@ -431,8 +431,29 @@ class Tahvel {
                     font-size: 12px;
                     z-index: 1000;
                     white-space: nowrap;
-}
+                    pointer-events: none; /* Prevent tooltip from interfering with hover events */
 
+                }
+                .tooltip-container {
+                    position: relative;
+                  }
+                  
+                .tooltip-container:hover::after {
+                    content: attr(data-tooltip);
+                    position: absolute;
+                    background-color: #333;
+                    color: #fff;
+                    padding: 5px;
+                    border-radius: 4px;
+                    font-size: 12px;
+                    z-index: 1000;
+                    white-space: nowrap;
+                    top: 100%;
+                    left: 50%;
+                    transform: translateX(-50%);
+                }
+
+                
             </style>`)
     )
   }
