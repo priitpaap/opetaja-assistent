@@ -235,7 +235,26 @@ class TahvelJournal {
     // Insert the new div after the target element
     targetElement.insertAdjacentElement('afterend', customDiv);
 
-    // Add event listener to the button
+    const updateGradesBtn = document.getElementById('update-grades-btn');
+
+    updateGradesBtn.addEventListener('mouseenter', () => {
+      TahvelJournal.showTooltip(updateGradesBtn, "Vali esmalt hindamisliik");
+    });
+    updateGradesBtn.addEventListener('mouseleave', () => {
+      TahvelJournal.hideTooltip();
+    });
+
+    const gradingTypeSelect = document.getElementById('gradingTypeSelect') as HTMLSelectElement;
+
+    gradingTypeSelect.addEventListener('change', () => {
+      if (gradingTypeSelect.value !== 'empty') {
+        updateGradesBtn.removeAttribute('disabled');
+      } else {
+        updateGradesBtn.setAttribute('disabled', '');
+      }
+    });
+    
+      // Add event listener to the button
     document.getElementById('update-grades-btn').addEventListener('click', async () => {
       TahvelJournal.setGradeInputAsSelectToFalse();
       const gradingTypeSelect = document.getElementById('gradingTypeSelect') as HTMLSelectElement;
