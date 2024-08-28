@@ -182,7 +182,7 @@ class Tahvel {
           studentsMissingIndependentWork: [],
           contactLessonsPlanned: null,
           independentWorkPlanned: null,
-          contactLessonsGiven: null,
+          contactLessonsInJournal: null,
           independentWorkGiven: null,
           gradingType: null,
           lessonMissing: false,
@@ -229,7 +229,7 @@ class Tahvel {
         response.lessonHours.capacityHours.find(
           (capacity) => capacity.capacity === "MAHT_i"
         )?.plannedHours || 0
-      journal.contactLessonsGiven =
+      journal.contactLessonsInJournal =
         response.lessonHours.capacityHours.find(
           (capacity) => capacity.capacity === "MAHT_a"
         )?.usedHours || 0
@@ -448,7 +448,7 @@ class Tahvel {
                     font-size: 12px;
                     z-index: 1000;
                     white-space: nowrap;
-                    top: 100%;
+                    top: -90%;
                     left: 50%;
                     transform: translateX(-50%);
                 }

@@ -12,7 +12,7 @@ export interface AssistentJournal {
   independentWorkPlanned: number
   independentWorkGiven: number
   contactLessonsPlanned: number
-  contactLessonsGiven: number
+  contactLessonsInJournal: number
   gradingType: AssistentGradingType
   lessonMissing: boolean
   lessonDiscrepancies: boolean
