@@ -90,6 +90,10 @@ export enum LessonType {
     lesson = 'lesson',
     endResult ='endResult',
     other = 'other',
+    eLearning = 'eLearning',
+    grading = 'grading',
+    practicalWork = 'practicalWork',
+
 }
 
 export interface AssistentLearningOutcomes {

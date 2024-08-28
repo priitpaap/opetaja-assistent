@@ -232,7 +232,7 @@ class TahvelJournal {
 
         const lessonsInTimetable = journal.entriesInTimetable.length;
 
-        if (lessonsInTimetable >= journal.contactLessonsPlanned) {
+        if (Math.max(lessonsInTimetable, journal.contactLessonsInJournal) >= journal.contactLessonsPlanned) {
             targetElement.insertAdjacentElement('afterend', customDiv);
         }
 
@@ -544,36 +544,6 @@ class TahvelJournal {
         mdIconElement.click()
     }
 
-    // static getLearningOutcomesArray(): AssistentLearningOutcomes[] {
-    //   const learningOutcomes = Array.from(
-    //     document.querySelectorAll(
-    //       'div[ng-if="journal.includesOutcomes"] tbody tr'
-    //     )
-    //   ).map((tr) => ({
-    //     name: tr.querySelector("td:nth-child(4)")!.textContent!,
-    //     code: tr.querySelector("td:nth-child(3)")!.textContent!
-    //   }))
-    //   if (learningOutcomes.length === 0) return learningOutcomes
-    //   TahvelJournal.removeGroupNameIfAllOutcomesAreForTheSameGroup(
-    //     learningOutcomes
-    //   )
-    //   return learningOutcomes
-    // }
-
-  private static removeGroupNameIfAllOutcomesAreForTheSameGroup(
-    outcomes: AssistentLearningOutcomes[]
-  ) {
-    const getGroupName = (name: string) =>
-      (name.match(/\(([^)]+)\)/g) || []).slice(-1)[0]?.slice(1, -1) || ""
-    const firstGroupName = getGroupName(outcomes[0].name)
-    if (outcomes.every(({ name }) => getGroupName(name) === firstGroupName)) {
-      outcomes.forEach(
-        (outcome) =>
-          (outcome.name = outcome.name.replace(/\s*\([^)]*\)\s*$/, "").trim())
-      )
-    }
-  }
-
     static async setJournalEntryStartLessonNr(
         discrepancy: AssistentJournalDifference
     ): Promise<void> {
@@ -852,16 +822,19 @@ class TahvelJournal {
                     )
                     : []
 
+                const lessonTypeMapping = {
+                    "SISSEKANNE_T": LessonType.lesson,
+                    "SISSEKANNE_I": LessonType.independentWork,
+                    "SISSEKANNE_E": LessonType.eLearning,
+                    "SISSEKANNE_H": LessonType.grading,
+                    "SISSEKANNE_P": LessonType.practicalWork
+                };
+
                 return {
                     id: entry.id,
                     date: entry.entryDate,
                     name: entry.nameEt,
-                    lessonType:
-                        entry.entryType === "SISSEKANNE_T"
-                            ? LessonType.lesson
-                            : entry.entryType === "SISSEKANNE_I"
-                                ? LessonType.independentWork
-                                : LessonType.other,
+                    lessonType: lessonTypeMapping[entry.entryType] || LessonType.other,
                     lessonCount: entry.lessons,
                     firstLessonStartNumber: entry.startLessonNr,
                     journalStudentResults: studentResults
@@ -1065,10 +1038,9 @@ class TahvelJournal {
     //eslint-disable-next-line
     static async fetchJournalEntry(journalId: number, exerciseId: number): Promise<any> {
         try {
-            const response = await AssistentApiClient.get(
+            return await AssistentApiClient.get(
                 `/journals/${journalId}/journalEntry/${exerciseId}`
             )
-            return response
         } catch (error) {
             console.error(`Failed to fetch journal entry ${exerciseId}`, error)
             throw error
@@ -1263,10 +1235,9 @@ class TahvelJournal {
     //eslint-disable-next-line
     static async fetchJournalOutcome(journalId: number, outcomeId: number): Promise<any> {
         try {
-            const response = await AssistentApiClient.get(
+            return await AssistentApiClient.get(
                 `/journals/${journalId}/journalOutcome/${outcomeId}`
             )
-            return response
         } catch (error) {
             console.error(`Failed to fetch journal entry ${outcomeId}`, error)
             throw error
