@@ -192,6 +192,7 @@ class TahvelJournal {
     )
       return;
 
+
     const journal = await TahvelJournal.getJournalWithValidation();
     if (!journal) return;
 
@@ -200,6 +201,8 @@ class TahvelJournal {
       console.error("Target element 'journalEntriesByDate' not found.");
       return;
     }
+
+
 
     const gradingType = journal.gradingType; // 'numeric' or 'passFail'
     const isPassFail = gradingType === "passFail";
@@ -221,7 +224,12 @@ class TahvelJournal {
         </div>
     `;
 
-    targetElement.insertAdjacentElement('afterend', customDiv);
+    const lessonsInTimetable = journal.entriesInTimetable.length;
+    // const lessonsInTimetable = 15;
+
+    if (lessonsInTimetable>= journal.contactLessonsPlanned){
+      targetElement.insertAdjacentElement('afterend', customDiv);
+    }
 
     const gradingTypeSelect = document.getElementById('gradingTypeSelect') as HTMLSelectElement;
     const updateGradesBtn = document.getElementById('update-grades-btn') as HTMLButtonElement;
@@ -350,6 +358,7 @@ class TahvelJournal {
           console.error(`Error processing grade for student ${studentId}:`, error);
         }
       }
+
 
       // Only save after processing all students for the current outcome
       if (outcomeResults.length > 0) {
