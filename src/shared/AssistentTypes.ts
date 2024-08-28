@@ -88,11 +88,13 @@ export interface AssistentLessonTime {
 export enum LessonType {
     independentWork = 'independentWork',
     lesson = 'lesson',
-    other = 'other'
+    endResult ='endResult',
+    other = 'other',
 }
 
 export interface AssistentLearningOutcomes {
     curriculumModuleOutcomes: number,
+    entryType: string,
     name: string,
     code?: string,
     studentOutcomeResults?: AssistentStudentOutcomeResults[]
@@ -101,6 +103,7 @@ export interface AssistentLearningOutcomes {
 export interface AssistentStudentOutcomeResults {
     id: number
     studentId: number
+    gradeCode: string
     gradeNumber: number
 }
 
