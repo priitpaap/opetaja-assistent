@@ -91,6 +91,11 @@ class Tahvel {
   }
 
   static handleError(error: Error): void {
+    // Suppress error messages for expected errors
+    if (error instanceof AssistentDetailedError && error.code == 520){
+      return;
+    }
+
     console.error(error)
 
     if (error instanceof AssistentApiError) {
@@ -101,11 +106,16 @@ class Tahvel {
       )
       return
     }
+
+    const error2 = error as AssistentDetailedError;
+    console.log('error2', error2.code);
     if (error instanceof AssistentDetailedError) {
+
       AssistentDom.showErrorMessage(error.title, error.message, error.code)
     } else {
       AssistentDom.showErrorMessage("Error", error.message, 500)
     }
+
   }
 
   /** Replaces the default history navigation with a custom one to execute actions based on the URL */

@@ -22,6 +22,7 @@ import {
     type apiStudentOutcomeEntry
 } from "./TahvelTypes"
 
+
 class TahvelJournal {
     //eslint-disable-next-line
     static async findJournalEntryElement(discrepancy: any
@@ -181,6 +182,7 @@ class TahvelJournal {
     }
 
 
+
     static async addGradingOptionsAndUpdateGrades() {
         const journalHeaderElement = document.querySelector(
             'div[ng-if="journal.hasJournalStudents"]'
@@ -217,21 +219,33 @@ class TahvelJournal {
         const numericText = `Eristav hindamine${isNumeric ? " (vaikimisi)" : ""}`;
 
         const customDiv = document.createElement('div');
-        customDiv.innerHTML = `
-    <div id="custom-options-container" style="margin-top: 20px; display: flex; justify-content: flex-end;">
-      <select id="gradingTypeSelect" style="width: 150px; height: 35px; font-size: 15px; padding: 2px; margin: 5px; border-radius: 4px; border: 1px solid #ccc;">
-        <option value="empty" selected></option>
-        <option value="passFail">${passFailText}</option>
-        <option value="numeric">${numericText}</option>
-      </select>
-      <button id="update-grades-btn" class="md-raised md-button md-ink-ripple md-primary" style="margin-left: 10px;" disabled>
-        Lisa/Uuenda hindeid
-      </button>
-    </div>
-  `;
+        customDiv.innerHTML = `  
+  <div id="custom-options-container" style="margin-top: 20px; display: flex; justify-content: flex-end;">
+    <select id="gradingTypeSelect" style="width: 220px; height: 35px; font-size: 15px; padding: 2px; margin: 5px; border-radius: 4px; border: 1px solid #ccc;">
+      <option value="empty" selected></option>
+      <option value="passFail">${passFailText}</option>
+      <option value="numeric">${numericText}</option>
+    </select>
+    <button id="update-grades-btn" class="md-raised md-button md-ink-ripple md-primary" style="margin-left: 10px;" disabled>
+      Lisa/uuenda kõik ÕV hinded automaatselt
+    </button>
+    <div id="confirmationDialog" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background-color:white; padding:20px; border:1px solid #ccc; border-radius:8px; z-index:1000;">
+        <div style="display: flex; justify-content: flex-end;">
+          <span id="closeDialog" style="cursor: pointer; font-size: 20px; font-weight: bold;">&times;</span>
+        </div>
+         <p>Kas uuendan ka olemasolevaid hindeid?</p>
+        <label>
+          <input type="checkbox" id="dontAskAgainCheckbox" />
+          Ära küsi enam
+        </label>
+        <br /><br />
+          <button class="md-raised md-button md-ink-ripple md-primary" style="background-color:#EF5350" id="confirmButton">Kirjuta vanad üle</button>
+          <button class="md-raised md-button md-ink-ripple md-accent" style="background-color:#757575" id="cancelButton">Jäta vanad alles</button>
+      </div>
+  </div>
+`;
 
         const lessonsInTimetable = journal.entriesInTimetable.length;
-
         if (Math.max(lessonsInTimetable, journal.contactLessonsInJournal) >= journal.contactLessonsPlanned) {
             targetElement.insertAdjacentElement('afterend', customDiv);
         }
@@ -245,25 +259,104 @@ class TahvelJournal {
                 TahvelJournal.showTooltip(updateGradesBtn, "Vali esmalt hindamisliik");
             }
         });
+
         updateGradesBtn.addEventListener('mouseleave', () => {
             TahvelJournal.hideTooltip();
         });
 
-        gradingTypeSelect.addEventListener('change', () => {
+        const savedGradingType = localStorage.getItem('selectedGradingType');
+        if (savedGradingType) {
+            gradingTypeSelect.value = savedGradingType;
+            if (gradingTypeSelect.value !== gradingType) {
+                gradingTypeSelect.style.color = "red"; // Set the background color to red if the value doesn't match
+            }else{
+                gradingTypeSelect.style.color = ""
+            }
+            updateGradesBtn.removeAttribute('disabled'); // Enable the button if a valid grading type is saved
+        }
+
+
+        // Add event listener for the grading type dropdown change event
+        gradingTypeSelect.addEventListener('change', async () => {
             if (gradingTypeSelect.value !== 'empty') {
                 updateGradesBtn.removeAttribute('disabled');
+                if (gradingTypeSelect.value !== gradingType) {
+
+                    gradingTypeSelect.style.color = 'red'; // Set the background color to red if the value doesn't match
+                } else {
+                    gradingTypeSelect.style.color = ''; // Reset the background color to default
+                }
+                // Save the selected grading type to localStorage
+                localStorage.setItem('selectedGradingType', gradingTypeSelect.value);
+                localStorage.removeItem('confirmGradesDeletion');
+                localStorage.removeItem('dontAskAgain');
+
+                await TahvelJournal.checkAndHighlightGrades(); // Now this is valid because the enclosing function is async
+
             } else {
                 updateGradesBtn.setAttribute('disabled', '');
+                gradingTypeSelect.style.color = '';
+                gradingTypeSelect.style.backgroundColor = '';
+                // Remove the grading type from localStorage if 'empty' is selected
+                localStorage.removeItem('selectedGradingType');
             }
         });
 
+
         document.getElementById('update-grades-btn').addEventListener('click', async () => {
-            await TahvelJournal.AddOrUpdateGrades(journal);
-            window.location.reload();
+            const confirmExistingGradesUpdate = localStorage.getItem("confirmExistingGradesUpdate");
+            const dontAskAgain = localStorage.getItem("dontAskAgain");
+            let userConfirmed = confirmExistingGradesUpdate != null;
+
+            if (dontAskAgain == null || confirmExistingGradesUpdate == null) {
+                // Show the confirmation dialog if 'dontAskAgain' is not checked and the user hasn't made a decision yet
+                userConfirmed = await TahvelJournal.showConfirmationDialog();
+            }
+
+            if (userConfirmed) {
+                await TahvelJournal.AddOrUpdateLearningOutcomesGrades(journal);
+                window.location.reload();
+            }
         });
     }
 
-    static async AddOrUpdateGrades(journal) {
+
+    static async showConfirmationDialog(): Promise<boolean> {
+        return new Promise((resolve) => {
+            const confirmationDialog = document.getElementById("confirmationDialog");
+            confirmationDialog.style.display = "block";
+
+            const confirmButton = document.getElementById("confirmButton");
+            const cancelButton = document.getElementById("cancelButton");
+            const dontAskAgainCheckbox = document.getElementById("dontAskAgainCheckbox") as HTMLInputElement;
+            const closeDialog = document.getElementById("closeDialog");
+
+
+            confirmButton.onclick = () => {
+                if (dontAskAgainCheckbox.checked) {
+                    localStorage.setItem("dontAskAgain", "true");
+                }
+                confirmationDialog.style.display = "none";
+                localStorage.setItem('confirmExistingGradesUpdate', "true");
+                resolve(true);
+            };
+
+            cancelButton.onclick = () => {
+                if (dontAskAgainCheckbox.checked) {
+                    localStorage.setItem("dontAskAgain", "true");
+                }
+                confirmationDialog.style.display = "none";
+                localStorage.setItem('confirmExistingGradesUpdate', "false");
+                resolve(true);
+            };
+
+            closeDialog.onclick = () => {
+                confirmationDialog.style.display = "none";
+            };
+        });
+    }
+
+    static async AddOrUpdateLearningOutcomesGrades(journal) {
 
         const gradingTypeSelect = document.getElementById('gradingTypeSelect') as HTMLSelectElement;
         const selectedGradingType = gradingTypeSelect.value;
@@ -278,6 +371,8 @@ class TahvelJournal {
 
             // Initialize payload for the current outcome
             const outcomeResults = [];
+
+            const confirmExistingGradesUpdate = localStorage.getItem("confirmExistingGradesUpdate") == "true";
 
             // Loop through each student and calculate/update the grades
             for (const student of journal.students) {
@@ -303,9 +398,10 @@ class TahvelJournal {
                         (os: any) => os.studentId === studentId
                     );
 
+
                     if (notAllFinished) {
                         // If there is already a grade and work is not finished, add to the list with grade: null
-                        if (existingOutcomeStudent) {
+                        if (existingOutcomeStudent && confirmExistingGradesUpdate) {
                             outcomeResults.push({
                                 studentId: studentId,
                                 isCurriculumOutcome: true,
@@ -331,6 +427,7 @@ class TahvelJournal {
                     if (studentGrades.length > 0) {
                         const calculatedGrade = TahvelJournal.calculateGrade(selectedGradingType, studentGrades);
 
+
                         // Prepare the outcome result object
                         //eslint-disable-next-line
                         const outcomeResult: any = {
@@ -347,8 +444,9 @@ class TahvelJournal {
                             removeStudentHistory: true,
                         };
 
+
                         // If there is an existing outcome and the grades differ, update
-                        if (existingOutcomeStudent && existingOutcomeStudent.grade.code !== outcomeResult.grade.code) {
+                        if (existingOutcomeStudent && existingOutcomeStudent.grade.code !== outcomeResult.grade.code && confirmExistingGradesUpdate) {
                             outcomeResult.id = existingOutcomeStudent.id;
                             outcomeResult.version = existingOutcomeStudent.version;
                         } else if (existingOutcomeStudent) {
@@ -1101,6 +1199,7 @@ class TahvelJournal {
     await TahvelJournal.checkAndHighlightGrades();
   }
 
+
     static async checkAndHighlightGrades() {
         // Step 1: Fetch the journal data
         const journal = await TahvelJournal.getJournalWithValidation();
@@ -1162,7 +1261,7 @@ class TahvelJournal {
                 );
 
                 // Check if this student is missing any independent work for this learning outcome
-                const allFinished = !journal.studentsMissingIndependentWork.some(studentMissing =>
+                const allAssigmentsGraded = !journal.studentsMissingIndependentWork.some(studentMissing =>
                     studentMissing.studentId === student.id &&
                     studentMissing.exerciseList.some(exercise =>
                         exercise.learningOutcomes.includes(outcomeCode)
@@ -1170,15 +1269,17 @@ class TahvelJournal {
                 );
 
                 // Check if grades can be assigned
-                const canAssignGrade = allFinished && studentGrades.length > 0;
+                const canAssignGrade = allAssigmentsGraded && studentGrades.length > 0;
 
-                if (!allFinished) {
-                    if (allLessonsAreInJournal) {
+                const result = outcome.studentOutcomeResults?.find(res => res.studentId === student.studentId);
+                if (!allAssigmentsGraded ) {
+                    if (allLessonsAreInJournal && !result) {
                         cell.style.backgroundColor = "#ea8080"; // Red color when not all work is finished
                         cell.setAttribute('data-tooltip', `Õpiväljundi hinded tuleb välja panna ${formattedDate}`);
                         cell.classList.add('tooltip-container');
-                    } else {
+                    }
 
+                    else {
                         // Light yellow color when not all work is finished and not all lessons are given
                         cell.style.backgroundColor = "rgb(255, 236, 179)";
                         cell.setAttribute('data-tooltip', `Antud ÕV-ga seotud tööd on vaja enne ära hinnata`);
@@ -1186,29 +1287,25 @@ class TahvelJournal {
                     }
                     return; // If not all work is finished, skip further processing
                 }
-
                 if (canAssignGrade) {
-                    const result = outcome.studentOutcomeResults?.find(res => res.studentId === student.studentId);
+
                     // Determine the grading type to use; default to journal.gradingType if result is undefined
-                    const gradingTypeToUse = result ? (/\d/.test(result.gradeCode) ? 'numeric' : 'passFail') : journal.gradingType;
+                    const gradingTypeToUse = localStorage.getItem("selectedGradingType") || journal.gradingType;
                     const calculatedGrade = TahvelJournal.calculateGrade(gradingTypeToUse, studentGrades);
 
-                    // Calculate alternative grade if possible
-                    const alternativeGradingType = gradingTypeToUse === 'numeric' ? 'passFail' : 'numeric';
-                    const alternativeCalculatedGrade = TahvelJournal.calculateGrade(alternativeGradingType, studentGrades);
-
-                    let compareGrade = null;
+                    let actualGrade = null;
                     if (result) {
-                        compareGrade = gradingTypeToUse === 'numeric' ? result.gradeNumber : result.gradeCode;
+                        actualGrade = /MA|A/.test(result.gradeCode) ? result.gradeCode : result.gradeNumber;
                     }
 
                     if (!result) {
                         cell.style.backgroundColor = "rgb(197, 202, 233)";
-                        cell.setAttribute('data-tooltip', `Võib panna: eristav ${calculatedGrade}, mitteeristav ${alternativeCalculatedGrade}`);
+                        cell.setAttribute('data-tooltip', `Võib panna ${calculatedGrade}`);
                         cell.classList.add('tooltip-container');
-                    } else if (calculatedGrade !== compareGrade) {
+                    } else if (calculatedGrade !== actualGrade) {
+                        console.log(`actualGrade: ${actualGrade}, calculatedGrade: ${calculatedGrade}`);
                         // If the grade is incorrect
-                        cell.style.backgroundColor = "rgb(252, 228, 236)"; // Orange color for incorrect grades
+                        cell.style.backgroundColor = "rgb(252, 228, 236)"; // Pink color for incorrect grades
                         cell.setAttribute('data-tooltip', `Peab olema ${calculatedGrade}`);
                         cell.classList.add('tooltip-container');
                     } else {
@@ -1217,16 +1314,24 @@ class TahvelJournal {
                         cell.removeAttribute('data-tooltip');
                         cell.classList.remove('tooltip-container');
                     }
-
                 } else {
+
+                    //Count exercises containing the learning outcome in the exercisesLists in learningOutcomes
+                    const exercisesWithLearningOutcome = journal.exercisesLists.filter(exercise => exercise.learningOutcomes.includes(outcomeCode));
+
                     // If there are no grades, apply the appropriate color
                     if (allLessonsAreInJournal) {
-                        cell.style.backgroundColor = "#ea8080"; // Red color for cells without a grade when all lessons are given
-                    } else {
-                        cell.style.backgroundColor = "rgb(255, 236, 179)"; // Light yellow color if grades cannot be assigned yet
+                        if (exercisesWithLearningOutcome.length <= 0) {
+                            cell.style.backgroundColor = "#ea8080";
+                            cell.setAttribute('data-tooltip', `Pole ühtegi selle õpiväljundiga seotud sissekannet`);
+                            cell.classList.add('tooltip-container');/// Red color for cells without a grade when all lessons are given
+                        } else {
+                            cell.style.backgroundColor = "rgb(255, 236, 179)";
+                            cell.setAttribute('data-tooltip', `Õpiväljundi hindamine on veel pooleli`);
+                            cell.classList.add('tooltip-container');// Light yellow color if grades cannot be assigned yet
+                        }
+
                     }
-                    cell.setAttribute('data-tooltip', `Õpiväljundi hindamine on veel pooleli`);
-                    cell.classList.add('tooltip-container');
                 }
             });
         });
@@ -1290,7 +1395,7 @@ class TahvelJournal {
 
                                 // Add tooltip for red background
                                 cell.addEventListener('mouseenter', () => {
-                                    TahvelJournal.showTooltip(cell, "Iseseisva töö hinne puudub (tähtaeg oli: " + exercise.homeworkDuedate + ")");
+                                    TahvelJournal.showTooltip(cell, `Iseseisva töö hinne puudub (tähtaeg${exercise.homeworkDuedate == null ? ": määramata" : " oli: " + exercise.homeworkDuedate})`);
                                 });
 
                                 cell.addEventListener('mouseleave', () => {

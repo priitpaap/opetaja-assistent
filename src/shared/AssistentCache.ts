@@ -152,6 +152,7 @@ export class AssistentCache {
     }
   }
 
+
   static findIndependentWorkDiscrepancies(journalId: number) {
     const journal = AssistentCache.getJournal(journalId);
     const missingIndependentWork: AssistentStudentsWithoutIndependentWork[] = [];
@@ -164,6 +165,7 @@ export class AssistentCache {
       const [day, month, year] = dateStr.split(".").map(Number);
       return new Date(year, month - 1, day); // month is zero-indexed
     }
+
 
     // Helper function to check if a date has passed
     function isDatePassed(dueDateStr: string | null): boolean {
@@ -181,7 +183,7 @@ export class AssistentCache {
       const studentMissingWorks: AssistentExerciseListEntry[] = [];
 
       journal.exercisesLists.forEach((exercise) => {
-        if (exercise.lessonType === LessonType.independentWork) {
+        if (exercise.lessonType !== LessonType.lesson && exercise.learningOutcomes.length > 0) {
           const isDueDatePassed = isDatePassed(exercise.homeworkDuedate);
           const hasGrade = journal.entriesInJournal.some((entry) =>
               entry.journalStudentResults.some(
@@ -208,6 +210,7 @@ export class AssistentCache {
       }
     });
 
+    console.log('missingIndependentWork', missingIndependentWork);
     journal.studentsMissingIndependentWork = missingIndependentWork;
   }
 

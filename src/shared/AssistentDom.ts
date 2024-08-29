@@ -30,7 +30,7 @@ class AssistentDom {
         return element;
     }
 
-    static async waitForElement(selector, timeout = 2000): Promise<HTMLElement> {
+    static async waitForElement(selector, timeout = 10000): Promise<HTMLElement> {
 
         return new Promise((resolve, reject) => {
 
@@ -40,6 +40,7 @@ class AssistentDom {
                 resolve(element);
                 return;
             }
+
 
             let resolved = false;
 
