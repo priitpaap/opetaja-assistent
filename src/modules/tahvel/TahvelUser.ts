@@ -1,4 +1,5 @@
 import Api from "~src/shared/AssistentApiClient";
+import {AssistentDetailedError} from "~src/shared/AssistentDetailedError";
 
 class TahvelUser {
 
@@ -6,6 +7,12 @@ class TahvelUser {
     static teacherId: number | null = null;
 
     static async init(): Promise<void> {
+
+        // Check if browser URL did not contain "idlogin.html"
+        if (window.location.href.includes("idlogin.html")) {
+            //
+            return new Promise((resolve, reject) => {return reject(new AssistentDetailedError(520, "User is not logged in", "User is not logged in"))});
+        }
 
         const user = await Api.get(`/user`);
 
@@ -26,7 +33,7 @@ class TahvelUser {
 
         TahvelUser.schoolId = user.school.id
         TahvelUser.teacherId = user.teacher
-        //TahvelUser.teacherId = 18737;
+        // TahvelUser.teacherId = 18737;
     }
 
 }

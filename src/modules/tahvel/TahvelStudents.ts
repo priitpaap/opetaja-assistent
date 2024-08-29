@@ -13,7 +13,8 @@ class TahvelStudents {
                 return [];
             }
         }
-        return response.map(({studentId, fullname, status}) => ({
+        return response.map(({id, studentId, fullname, status}) => ({
+            id,
             studentId,
             name: fullname,
             status: this.mapStatus(status)

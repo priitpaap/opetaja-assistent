@@ -43,14 +43,21 @@ class TahvelJournalEntryDialog {
             if (TahvelJournalEntryDialog.isDialogReady(dialogContainer)) {
                 clearInterval(checkInterval);
                 await TahvelJournalEntryDialog.setupDialog(dialogContainer);
+                // Adjust dialog position if it's too low on the screen
+                const rect = dialogContainer.getBoundingClientRect();
+                if (rect.bottom > window.innerHeight) {
+                    dialogContainer.style.top = `${window.innerHeight - rect.height}px`;
+                }
             }
         }, 300);
         setTimeout(() => clearInterval(checkInterval), 5000);
     }
 
+
     private static isDialogReady(dialogContainer: HTMLElement): boolean {
         return ['Sissekande liik', 'Auditoorne õpe', 'Iseseisev õpe', 'Kodutöö'].every(text => dialogContainer.innerHTML.includes(text));
     }
+
 
     private static async setupDialog(dialogContainer: HTMLElement) {
         await AssistentDom.waitForElement('button.md-focused');
@@ -92,7 +99,7 @@ class TahvelJournalEntryDialog {
 
     private static updateEntryNameOnContentChange() {
         TahvelJournalEntryDialog.updateEntryName();
-    }x
+    }
 
     private static updateEntryNameOnEntryTypeChange() {
         TahvelJournalEntryDialog.updateEntryName();
@@ -130,11 +137,12 @@ class TahvelJournalEntryDialog {
         TahvelJournalEntryDialog.learningOutcomesSlimSelect = new SlimSelect({
             select: selectElement,
             settings: {
-                contentLocation: document.getElementById('#slim-select-content-container'),
+                contentLocation: document.getElementById('slim-select-content-container'),
+                contentPosition: 'relative',
                 hideSelected: true,
                 showSearch: false,
                 placeholderText: 'Vali ÕV-d, millega see iseseisev töö seotud on (vajalik lõpuhinnete arvutamiseks)',
-                allowDeselect: true
+                allowDeselect: true,
             },
             events: {
                 afterChange: () => TahvelJournalEntryDialog.updateEntryName()
@@ -152,10 +160,14 @@ class TahvelJournalEntryDialog {
         }
     }
 
+
+
     private static getLearningOutcomesArray(): AssistentLearningOutcomes[] {
         const learningOutcomes = Array.from(document.querySelectorAll('div[ng-if="journal.includesOutcomes"] tbody tr')).map(tr => ({
             name: tr.querySelector('td:nth-child(4)')!.textContent!,
             code: tr.querySelector('td:nth-child(3)')!.textContent!,
+            curriculumModuleOutcomes: 0,
+            entryType: "",
         }));
         if (learningOutcomes.length === 0) return learningOutcomes;
         TahvelJournalEntryDialog.removeGroupNameIfAllOutcomesAreForTheSameGroup(learningOutcomes);

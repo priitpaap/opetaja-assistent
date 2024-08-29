@@ -1,19 +1,21 @@
 export interface AssistentJournal {
-    id: number;
-    name: string;
-    entriesInTimetable: AssistentTimetableEntry[];
-    entriesInJournal: AssistentJournalEntry[];
-    differencesToTimetable: AssistentJournalDifference[];
-    students: AssistentStudent[];
-    learningOutcomes: AssistentLearningOutcomes[];
-    missingGrades: AssistentStudentsWithoutGrades[];
-    independentWorkPlanned: number;
-    independentWorkGiven: number;
-    contactLessonsPlanned: number;
-    contactLessonsGiven: number;
-    gradingType: AssistentGradingType;
-    lessonMissing: boolean;
-    lessonDiscrepancies: boolean;
+  id: number
+  name: string
+  entriesInTimetable: AssistentTimetableEntry[]
+  entriesInJournal: AssistentJournalEntry[]
+  exercisesLists: AssistentExerciseListEntry[]
+  differencesToTimetable: AssistentJournalDifference[]
+  students: AssistentStudent[]
+  learningOutcomes: AssistentLearningOutcomes[]
+  studentsMissingIndependentWork: AssistentStudentsWithoutIndependentWork[]
+  missingGrades: AssistentStudentsWithoutGrades[]
+  independentWorkPlanned: number
+  independentWorkGiven: number
+  contactLessonsPlanned: number
+  contactLessonsInJournal: number
+  gradingType: AssistentGradingType
+  lessonMissing: boolean
+  lessonDiscrepancies: boolean
 }
 
 export enum AssistentGradingType {
@@ -22,6 +24,7 @@ export enum AssistentGradingType {
 }
 
 export interface AssistentStudent {
+    id: number;
     studentId: number;
     name: string;
     status: AssistentStudentStatus;
@@ -45,14 +48,23 @@ export interface AssistentJournalDifference {
     journalEntryId: number;
 }
 
+export interface AssistentExerciseListEntry {
+  id: number
+  entryDate: string
+  learningOutcomes: number[]
+  content: string
+  lessonType: LessonType
+  homeworkDuedate: string
+}
+
 export interface AssistentTimetableEntry {
-    id: number;
-    name: string;
-    date: string;
-    timeStart: string;
-    timeEnd: string;
-    firstLessonStartNumber: number;
-    journalId: number;
+  id: number
+  name: string
+  date: string
+  timeStart: string
+  timeEnd: string
+  firstLessonStartNumber: number
+  journalId: number
 }
 
 export interface AssistentJournalEntry {
@@ -62,6 +74,7 @@ export interface AssistentJournalEntry {
     lessonType: LessonType
     lessonCount: number;
     firstLessonStartNumber: number;
+    journalStudentResults: AssistentStudentEntryResults[];
 }
 
 export interface AssistentLessonTime {
@@ -74,21 +87,44 @@ export interface AssistentLessonTime {
 export enum LessonType {
     independentWork = 'independentWork',
     lesson = 'lesson',
-    other = 'other'
+    endResult ='endResult',
+    other = 'other',
+    eLearning = 'eLearning',
+    grading = 'grading',
+    practicalWork = 'practicalWork',
+
 }
 
 export interface AssistentLearningOutcomes {
+    curriculumModuleOutcomes: number,
+    entryType: string,
     name: string,
     code?: string,
     studentOutcomeResults?: AssistentStudentOutcomeResults[]
 }
 
 export interface AssistentStudentOutcomeResults {
-    studentId: number,
+    id: number
+    studentId: number
+    gradeCode: string
+    gradeNumber: number
+}
+
+export interface AssistentStudentEntryResults {
+    studentId: number;
+    gradeCode: string;
+    gradeNumber?: number;
 }
 
 export interface AssistentStudentsWithoutGrades {
+    curriculumModuleOutcomes: number,
     name: string,
+    code: string,
     studentList: AssistentStudent[]
 }
 
+export interface AssistentStudentsWithoutIndependentWork {
+  studentId: number
+  name: string
+  exerciseList: AssistentExerciseListEntry[]
+}
