@@ -876,6 +876,7 @@ class TahvelJournal {
       )
     }
 
+
     function getGradeNumber(gradeCode: string): number {
       if (gradeCode.includes("MA")) {
         return 2
@@ -928,6 +929,7 @@ class TahvelJournal {
                 entry.entryType === "SISSEKANNE_O" ||
                 entry.entryType === "SISSEKANNE_L"
         )
+
         .map((entry) => ({
           journalId: journalId,
           name: entry.nameEt,
@@ -1459,22 +1461,24 @@ class TahvelJournal {
       let nameEt = exercise.nameEt;
       const homeworkDuedate = exercise.homeworkDuedate;
 
+
       // Check if learningOutcomes is not empty
       if (learningOutcomes && learningOutcomes.length > 0) {
         // Format the learning outcomes as [ÕV1, ÕV3]
-        const formattedLearningOutcomes = `[${learningOutcomes.map((outcome) => `ÕV${outcome}`).join(", ")}]`;
+        const formattedLearningOutcomes = `${learningOutcomes.map((outcome) => `ÕV${outcome}`).join(", ")}`;
 
         // Remove the text in parentheses including (ÕV)
         nameEt = nameEt.replace(/\(ÕV\d+(,\s*ÕV\d+)*\)/g, "").trim();
 
+
         // Limit nameEt to the first 15 characters after removing (ÕV)
-        const limitedNameEt = nameEt.length > 15 ? nameEt.slice(0, 15) + "..." : nameEt;
+        const limitedNameEt = nameEt.length > 30 ? nameEt.slice(0, 30).replace(/[^\w\s]|_/g, "").replace(/\s+/g, " ").trim() + "…": nameEt;
 
         // Find the corresponding header based on the `aria-label` containing the nameEt
         const matchingHeader = Array.from(headers).find((header) => {
           const ariaLabel = header.querySelector('div[aria-label]')?.getAttribute('aria-label');
           return ariaLabel && ariaLabel.includes(nameEt);
-        });
+        }) ;
 
         if (matchingHeader) {
           const headerSpan = matchingHeader.querySelector('span.journal-entry-button.pointer');
@@ -1491,14 +1495,24 @@ class TahvelJournal {
 
               // Create new content elements
               const dateOnlySpan = document.createElement('span');
-              dateOnlySpan.textContent = homeworkDuedate || "määramata";
-              dateOnlySpan.style.display = 'block'; // Ensure the date is on its own line
+              dateOnlySpan.textContent = `${homeworkDuedate || "määramata"} | ${formattedLearningOutcomes}`;
+              dateOnlySpan.style.display = 'block';
+              dateOnlySpan.style.textDecoration = 'none !important';
+              dateOnlySpan.style.textDecoration = 'none !important';
+              dateOnlySpan.style.borderTop = '1px solid black';
+              dateOnlySpan.style.overflowWrap = 'break-all';
+              dateOnlySpan.style.maxWidth = '100%';
+              dateOnlySpan.style.fontSize = '0.9em';
+              dateOnlySpan.style.paddingTop = '3px !important';
 
               const combinedTextSpan = document.createElement('span');
-              combinedTextSpan.textContent = `${formattedLearningOutcomes} ${limitedNameEt}`;
+              combinedTextSpan.textContent = `${limitedNameEt}`;
+              combinedTextSpan.style.fontSize = '1em';
+              combinedTextSpan.style.hyphens = 'auto';
+              combinedTextSpan.style.wordBreak = 'break-all';
               combinedTextSpan.style.display = 'inline-block';
               combinedTextSpan.style.whiteSpace = 'wrap';
-              combinedTextSpan.style.overflowWrap = 'break-word';
+              combinedTextSpan.style.overflowWrap = 'break-all';
               combinedTextSpan.style.maxWidth = '100%';
 
               // Append new spans to the header span

@@ -20,6 +20,7 @@ class TahvelDom {
         return AssistentDom.createButton(className, textContent, clickHandler);
     }
 
+
     static createBlinkStyle() {
         const style = document.createElement('style');
         style.textContent = `

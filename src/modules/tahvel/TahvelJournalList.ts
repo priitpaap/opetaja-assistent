@@ -2,8 +2,8 @@ import {AssistentCache} from '~src/shared/AssistentCache';
 import TahvelDom from "~src/modules/tahvel/TahvelDom";
 
 class TahvelJournalList {
-    static addWarningTriangles() {
 
+    static addWarningTriangles() {
 
         const journalsListTableRowsSelector = '#main-content > div.layout-padding > div > md-table-container > table > tbody > tr';
         const journalLinksSelector = `${journalsListTableRowsSelector} > td:nth-child(2) > a`
