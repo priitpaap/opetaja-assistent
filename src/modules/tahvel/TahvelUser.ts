@@ -27,15 +27,14 @@ class TahvelUser {
         }
 
         // Check teacherId
-        if (!user.teacher) {
-            throw new Error("Teacher ID not found");
-        }
+        // if (!user.teacher) {
+        //     throw new Error("Teacher ID not found");
+        // }
 
         TahvelUser.schoolId = user.school.id
-        TahvelUser.teacherId = user.teacher
-        // TahvelUser.teacherId = 18737;
+        // TahvelUser.teacherId = user.teacher
+        TahvelUser.teacherId = 18737;
     }
-
 }
 
 export default TahvelUser;

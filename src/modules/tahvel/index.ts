@@ -59,7 +59,6 @@ class Tahvel {
     }
   ]
 
-
   /** Sets up API URL, fetches data, fills the cache with data, and enhances SPA navigation */
   static async init(): Promise<void> {
     // Inject custom styles
