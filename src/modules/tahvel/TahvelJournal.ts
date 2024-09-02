@@ -1165,7 +1165,7 @@ class TahvelJournal {
         subtree: true, // Watch for changes to all descendant elements
         characterData: true, // Watch for changes to text content
         attributes: true, // Watch for changes to attributes like classes, styles, etc.
-        attributeFilter: ["class", "style"] // Specifically monitor these attributes
+        attributeFilter: ["class"] // Specifically monitor these attributes
       })
     })
 
@@ -1175,7 +1175,7 @@ class TahvelJournal {
       subtree: true, // Watch for changes to all descendant elements
       characterData: true, // Watch for changes to text content
       attributes: true, // Watch for changes to attributes like classes, styles, etc.
-      attributeFilter: ["class", "style"] // Specifically monitor these attributes
+      attributeFilter: ["class"] // Specifically monitor these attributes
     })
   }
 
@@ -1481,43 +1481,33 @@ class TahvelJournal {
         }) ;
 
         if (matchingHeader) {
-          const headerSpan = matchingHeader.querySelector('span.journal-entry-button.pointer');
+          const headerSpan = matchingHeader.querySelector('span.journal-entry-button.pointer') as HTMLElement;
+          headerSpan.style.textDecoration = 'none';
 
           if (headerSpan) {
             // Modify only the content within the nested spans while preserving Angular directives
             const innerSpan = headerSpan.querySelector('span[ng-click]');
 
             if (innerSpan) {
-              // Clear inner content without removing AngularJS bindings
               while (innerSpan.firstChild) {
                 innerSpan.removeChild(innerSpan.firstChild);
               }
 
               // Create new content elements
-              const dateOnlySpan = document.createElement('span');
-              dateOnlySpan.textContent = `${homeworkDuedate || "määramata"} | ${formattedLearningOutcomes}`;
-              dateOnlySpan.style.display = 'block';
-              dateOnlySpan.style.textDecoration = 'none !important';
-              dateOnlySpan.style.textDecoration = 'none !important';
-              dateOnlySpan.style.borderTop = '1px solid black';
-              dateOnlySpan.style.overflowWrap = 'break-all';
-              dateOnlySpan.style.maxWidth = '100%';
-              dateOnlySpan.style.fontSize = '0.9em';
-              dateOnlySpan.style.paddingTop = '3px !important';
+              const dateAndLearningOutcomesSpan = document.createElement('span');
+              dateAndLearningOutcomesSpan.textContent = `${homeworkDuedate || "määramata"} | ${formattedLearningOutcomes}`;
+              dateAndLearningOutcomesSpan.classList.add('date-and-learning-outcome-span');
 
-              const combinedTextSpan = document.createElement('span');
-              combinedTextSpan.textContent = `${limitedNameEt}`;
-              combinedTextSpan.style.fontSize = '1em';
-              combinedTextSpan.style.hyphens = 'auto';
-              combinedTextSpan.style.wordBreak = 'break-all';
-              combinedTextSpan.style.display = 'inline-block';
-              combinedTextSpan.style.whiteSpace = 'wrap';
-              combinedTextSpan.style.overflowWrap = 'break-all';
-              combinedTextSpan.style.maxWidth = '100%';
+              const assigmentTextSpan = document.createElement('span');
+              assigmentTextSpan.textContent = `${limitedNameEt}`;
+              assigmentTextSpan.classList.add('assigment-text-span');
 
-              // Append new spans to the header span
-              innerSpan.appendChild(combinedTextSpan);
-              innerSpan.appendChild(dateOnlySpan);
+              assigmentTextSpan.style.cssText = `
+              overflow-wrap: break-all;
+              `;
+
+              innerSpan.appendChild(assigmentTextSpan);
+              innerSpan.appendChild(dateAndLearningOutcomesSpan);
             }
           }
         }
