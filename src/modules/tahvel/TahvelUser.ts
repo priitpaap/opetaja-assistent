@@ -35,7 +35,6 @@ class TahvelUser {
         TahvelUser.teacherId = user.teacher
         // TahvelUser.teacherId = 18737;
     }
-
 }
 
 export default TahvelUser;

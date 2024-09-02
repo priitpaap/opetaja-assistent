@@ -59,7 +59,6 @@ class Tahvel {
     }
   ]
 
-
   /** Sets up API URL, fetches data, fills the cache with data, and enhances SPA navigation */
   static async init(): Promise<void> {
     // Inject custom styles
@@ -463,6 +462,25 @@ class Tahvel {
                     top: -90%;
                     left: 50%;
                     transform: translateX(-50%);
+                }
+
+                .date-and-learning-outcome-span {
+                    display: block; 
+                    border-top: 1px solid black; 
+                    max-width: 100%; 
+                    font-size: 0.9em; 
+                    padding-top: 3px; 
+                    color: inherit;
+                    text-decoration: none !important;
+                }
+                
+                .assigment-text-span {
+                    font-size: 1em;
+                    hyphens: auto;
+                    word-break: break-all;
+                    display: inline-block;
+                    white-space: wrap;
+                    max-width: 100%;
                 }
                 
             </style>`)

@@ -52,6 +52,7 @@ export interface AssistentExerciseListEntry {
   id: number
   entryDate: string
   learningOutcomes: number[]
+  nameEt: string
   content: string
   lessonType: LessonType
   homeworkDuedate: string
