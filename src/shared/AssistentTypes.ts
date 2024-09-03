@@ -6,6 +6,7 @@ export interface AssistentJournal {
   exercisesLists: AssistentExerciseListEntry[]
   differencesToTimetable: AssistentJournalDifference[]
   students: AssistentStudent[]
+  studentGroups: string[]
   learningOutcomes: AssistentLearningOutcomes[]
   studentsMissingIndependentWork: AssistentStudentsWithoutIndependentWork[]
   missingGrades: AssistentStudentsWithoutGrades[]
@@ -29,6 +30,7 @@ export interface AssistentStudent {
     name: string;
     status: AssistentStudentStatus;
 }
+
 
 export enum AssistentStudentStatus {
     active = 'active',
@@ -93,7 +95,6 @@ export enum LessonType {
     eLearning = 'eLearning',
     grading = 'grading',
     practicalWork = 'practicalWork',
-
 }
 
 export interface AssistentLearningOutcomes {

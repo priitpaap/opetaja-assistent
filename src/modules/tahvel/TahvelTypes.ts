@@ -69,6 +69,7 @@ export interface apiJournalInfoEntry {
   id: number
   lessonHours: apiLessonHours
   assessment: apiAssessmentEntry
+  studentGroups: string[]
 }
 
 export enum apiAssessmentEntry {

@@ -3,10 +3,11 @@ import { AssistentApiError } from "~src/shared/AssistentApiError"
 
 
 
-
-
 class AssistentApiClient {
+
     static url: string = AssistentApiClient.extractBaseUrl();
+    // static kriitUrl: string = 'https://kriit.eu';
+    static kriitUrl: string = 'https://sisseastumine.dvl.to';
 
     static extractBaseUrl(): string {
         const url = window.location.href;
@@ -21,11 +22,45 @@ class AssistentApiClient {
     }
 
     // eslint-disable-next-line
-    static async request(method: string, endpoint: string, body: object | null = null): Promise<any> {
+    static async put(endpoint: string, body): Promise<any> {
+
+        const headers = {
+            'X-XSRF-TOKEN': TahvelJournal.getXsrfToken(),
+            'Content-Type': 'application/json',
+
+        }
+        return AssistentApiClient.request('PUT', endpoint, body, headers);
+    }
+
+    // eslint-disable-next-line
+    static async post(endpoint: string, body): Promise<any> {
+
+        const headers = {
+            'X-XSRF-TOKEN': TahvelJournal.getXsrfToken(),
+            'Content-Type': 'application/json',
+        }
+        return AssistentApiClient.request('POST', endpoint, body, headers);
+    }
+
+    // eslint-disable-next-line
+    static async request(method: string, endpoint: string, body: object | null = null, customHeaders: object | null = null): Promise<any> {
+
+
         const headers = new Headers({
             'Accept': 'application/json',
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            ...customHeaders
         });
+
+
+        //If endpoint has kriit.eu in it, add Authorization header
+        if (endpoint.includes(AssistentApiClient.kriitUrl)) {
+            const apiKey = localStorage.getItem('KRIIT_API_KEY');
+            if (!apiKey) {
+                throw new Error('KRIIT_API_KEY not found');
+            }
+            headers.append('Authorization', `Bearer ${apiKey}`);
+        }
 
         let requestBody: string | null = null;
 
@@ -34,8 +69,11 @@ class AssistentApiClient {
             headers.append('Content-Length', new Blob([requestBody]).size.toString());
         }
 
+        // Set fullUrl based on whether endpoint starts with http
+        const fullUrl = endpoint.startsWith('http') ? endpoint : AssistentApiClient.url + endpoint;
+
         // Create a Request object
-        const request = new Request(AssistentApiClient.url + endpoint, {
+        const request = new Request(fullUrl, {
             method: method,
             headers: headers,
             body: requestBody
@@ -64,6 +102,7 @@ class AssistentApiClient {
         return responseBody ? JSON.parse(responseBody) : {};
     }
 
+
     private static getHTTPRequestResponseLog(method: string, endpoint: string, headers: Headers, response: Response, requestBody: string | null, responseBody: string): string {
         let requestHeadersLog = `${method} ${endpoint} HTTP/1.1\n`;
         // Log request headers
@@ -83,77 +122,6 @@ class AssistentApiClient {
 
         return `${requestHeadersLog}${formattedRequestBody}\n\n${responseHeadersLog}${formattedResponseBody}`;
     }
-
-    // eslint-disable-next-line
-    static async put(endpoint: string, data: any, headers: HeadersInit = {}): Promise<any> {
-        const xsrfToken = TahvelJournal.getXsrfToken(); // Get the XSRF token from TahvelJournal
-        if (!xsrfToken) {
-            throw new Error('XSRF token not found');
-        }
-
-        const response = await fetch(`${AssistentApiClient.url}${endpoint}`, {
-            method: 'PUT',
-            headers: {
-                'X-XSRF-TOKEN': xsrfToken,
-                'Content-Type': 'application/json',
-                ...headers
-            },
-            body: JSON.stringify(data),
-            credentials: 'include' // Ensures cookies are sent with the request
-        });
-
-        if (!response.ok) {
-            const responseText = await response.text();
-            throw new AssistentApiError(response.status, endpoint, responseText, {
-                method: 'PUT',
-                headers: {
-                    'X-XSRF-TOKEN': xsrfToken,
-                    'Content-Type': 'application/json',
-                    ...headers
-                },
-                body: JSON.stringify(data),
-                credentials: 'include'
-            }, response, 'Error occurred during PUT request');
-        }
-
-        return response.json();
-    }
-
-    // eslint-disable-next-line
-    static async post(endpoint: string, data: any, headers: HeadersInit = {}): Promise<any> {
-        const xsrfToken = TahvelJournal.getXsrfToken(); // Get the XSRF token from TahvelJournal
-        if (!xsrfToken) {
-            throw new Error('XSRF token not found');
-        }
-
-        const response = await fetch(`${AssistentApiClient.url}${endpoint}`, {
-            method: 'POST', // Set method to POST
-            headers: {
-                'X-XSRF-TOKEN': xsrfToken,
-                'Content-Type': 'application/json',
-                ...headers
-            },
-            body: JSON.stringify(data), // Convert data to JSON string
-            credentials: 'include' // Ensures cookies are sent with the request
-        });
-
-        if (!response.ok) {
-            const responseText = await response.text();
-            throw new AssistentApiError(response.status, endpoint, responseText, {
-                method: 'POST', // Include the method in the error data
-                headers: {
-                    'X-XSRF-TOKEN': xsrfToken,
-                    'Content-Type': 'application/json',
-                    ...headers
-                },
-                body: JSON.stringify(data),
-                credentials: 'include'
-            }, response, 'Error occurred during POST request');
-        }
-
-        return response.json(); // Return the parsed JSON response
-    }
-
 }
 
 export default AssistentApiClient;

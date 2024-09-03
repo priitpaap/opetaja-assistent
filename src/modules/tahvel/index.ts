@@ -56,6 +56,13 @@ class Tahvel {
       urlFragment: new RegExp(urlForJournalEdit),
       elementToWaitFor: elementInJournalEdit,
       action: TahvelJournal.colorJournalEntryCell
+    },
+    {
+      description:
+          "Add event listeners to save entity button for sending request to KRIIT",
+      urlFragment: new RegExp(urlForJournalEdit),
+      elementToWaitFor: elementInJournalEdit,
+      action: TahvelJournal.addEventListenersToAddNewEntryButton
     }
   ]
 
@@ -63,6 +70,9 @@ class Tahvel {
   static async init(): Promise<void> {
     // Inject custom styles
     Tahvel.addCustomStyles()
+
+    //add dialog HTML to the DOM
+    AssistentDom.addDialogToDom()
 
     // Initialize customizations (try-catch doesn't work with promises, so we need to catch errors explicitly)
     TahvelJournalEntryDialog.initCustomizations().catch((error) =>
@@ -182,6 +192,7 @@ class Tahvel {
           entriesInTimetable: [],
           differencesToTimetable: [],
           students: [],
+          studentGroups: [],
           learningOutcomes: [],
           missingGrades: [],
           exercisesLists: [],
@@ -248,6 +259,7 @@ class Tahvel {
           ? AssistentGradingType.numeric
           : AssistentGradingType.passFail
 
+      journal.studentGroups = response.studentGroups
       // Find discrepancies for this journal
       AssistentCache.findJournalDiscrepancies(journal.id)
       AssistentCache.findIndependentWorkDiscrepancies(journal.id)
@@ -482,6 +494,39 @@ class Tahvel {
                     white-space: wrap;
                     max-width: 100%;
                 }
+                
+                #assistent-dialog{
+                    display:none; 
+                    position:fixed;
+                    max-width: 400px;
+                    top:50%; 
+                    left:50%; 
+                    transform:translate(-50%, -50%); 
+                    background-color:white; 
+                    padding:20px; 
+                    border:1px solid #ccc; 
+                    border-radius:8px; 
+                    z-index:1000;
+                }
+                
+                #assistent-dialog .dialog-title{
+                    background: linear-gradient(to right, #4CAF50, #3E8E41);
+                    color: white;
+                    padding: 15px;
+                    font-size: 20px;
+                    font-weight: bold;
+                    text-align: center;
+                    border-radius: 10px 10px 0 0;
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                }
+                
+                #assistent-dialog .button-container
+                {
+                    padding-top: 0.5em; 
+                    display: flex;
+                    justify-content: center;
+                }
+                
                 
             </style>`)
     )
