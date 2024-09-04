@@ -13,7 +13,7 @@ class AssistentDom {
     return button
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   static createElement(
     type: string,
     // eslint-disable-next-line

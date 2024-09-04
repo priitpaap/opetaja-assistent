@@ -1,6 +1,7 @@
 import { DateTime } from "luxon"
 
 import Api from "~src/shared/AssistentApiClient"
+import browser from 'webextension-polyfill';
 import AssistentApiClient from "~src/shared/AssistentApiClient"
 import AssistentCache from "~src/shared/AssistentCache"
 import { AssistentDetailedError } from "~src/shared/AssistentDetailedError"
@@ -54,6 +55,7 @@ class TahvelJournal {
     ) as HTMLElement
     return targetSpan || null
   }
+
 
   static async getJournalWithValidation(): Promise<AssistentJournal | null> {
     const journalId = parseInt(window.location.href.split("/")[5])
@@ -260,7 +262,7 @@ class TahvelJournal {
       TahvelJournal.hideTooltip()
     })
 
-    const savedGradingType = localStorage.getItem("selectedGradingType")
+    const savedGradingType:string = await TahvelJournal.getFromStorage("selectedGradingType")
     if (savedGradingType) {
       gradingTypeSelect.value = savedGradingType
       if (gradingTypeSelect.value !== gradingType) {
@@ -281,9 +283,9 @@ class TahvelJournal {
           gradingTypeSelect.style.color = "" // Reset the background color to default
         }
         // Save the selected grading type to localStorage
-        localStorage.setItem("selectedGradingType", gradingTypeSelect.value)
-        localStorage.removeItem("confirmGradesDeletion")
-        localStorage.removeItem("existingGradesUpdateDontAskAgain")
+        await TahvelJournal.setInStorage("selectedGradingType", gradingTypeSelect.value)
+        await TahvelJournal.removeFromStorage("confirmGradesDeletion")
+        await TahvelJournal.removeFromStorage("existingGradesUpdateDontAskAgain")
 
         await TahvelJournal.checkAndHighlightLearningOutcomesGrades() // Now this is valid because the enclosing function is async
       } else {
@@ -291,17 +293,17 @@ class TahvelJournal {
         gradingTypeSelect.style.color = ""
         gradingTypeSelect.style.backgroundColor = ""
         // Remove the grading type from localStorage if 'empty' is selected
-        localStorage.removeItem("selectedGradingType")
+        await TahvelJournal.removeFromStorage("selectedGradingType")
       }
     })
 
     document
       .getElementById("update-grades-btn")
       .addEventListener("click", async () => {
-        const confirmExistingGradesUpdate = localStorage.getItem(
+        const confirmExistingGradesUpdate = TahvelJournal.getFromStorage(
           "confirmExistingGradesUpdate"
         )
-        const dontAskAgain = localStorage.getItem(
+        const dontAskAgain = TahvelJournal.getFromStorage(
           "existingGradesUpdateDontAskAgain"
         )
 
@@ -314,28 +316,28 @@ class TahvelJournal {
               {
                 text: "Kirjuta vanad üle",
                 class: "md-primary",
-                onClick: (dontAskAgain) => {
+                onClick: async (dontAskAgain) => {
                   if (dontAskAgain) {
-                    localStorage.setItem(
+                    await TahvelJournal.setInStorage(
                       "existingGradesUpdateDontAskAgain",
                       "true"
                     )
                   }
-                  localStorage.setItem("confirmExistingGradesUpdate", "true")
+                  await TahvelJournal.setInStorage("confirmExistingGradesUpdate", "true")
                   TahvelJournal.hideDialog()
                 }
               },
               {
                 text: "Jäta vanad alles",
                 class: "md-accent",
-                onClick: (dontAskAgain) => {
+                onClick: async (dontAskAgain) => {
                   if (dontAskAgain) {
-                    localStorage.setItem(
+                    await TahvelJournal.setInStorage(
                       "existingGradesUpdateDontAskAgain",
                       "true"
                     )
                   }
-                  localStorage.setItem("confirmExistingGradesUpdate", "false")
+                  await TahvelJournal.setInStorage("confirmExistingGradesUpdate", "false")
                   TahvelJournal.hideDialog()
                 }
               }
@@ -355,92 +357,92 @@ class TahvelJournal {
     actions: any[]
     enableDontShowAgain?: boolean
   }): Promise<void> {
+    // Create a new promise and return it
     return new Promise<void>((resolve) => {
-      // Get the dialog
-      const dialog = document.getElementById("assistent-dialog")
+      // Define an async function to handle the dialog logic
+      const handleDialog = async () => {
+        // Get the dialog
+        const dialog = document.getElementById("assistent-dialog");
 
-      if (typeof options === "object" && options !== null) {
-        if (!options.content) {
-          options.content = options.title
-        }
-      } else {
-        throw new TypeError("Options must be an object")
-      }
-
-
-      // Attempt to get an item from localStorage that matches the dialog name. If it exists use its value as the button text to execute its onClick function, if it doesn't show the dialog
-      const previousChoice = localStorage.getItem(options.title)
-      if (previousChoice) {
-        const previousAction = options.actions.find(
-          (action) => action.text === previousChoice
-        )
-        if (previousAction) {
-          previousAction.onClick()
-          return
-        }
-      }
-
-
-      // Set the dialog's content
-      dialog.innerHTML = `
-  <div class="dialog-title">
-    ${options.title}
-</div>
-  <p>${options.content}</p>
-  <div>
-    ${
-      options.enableDontShowAgain
-        ? `
-      <input type="checkbox" id="dontAskAgain">
-      <label for="dontAskAgain">Ära küsi enam</label>
-    `
-        : ""
-    }
-  </div>
-  <div class="button-container" id="dialogButtons"></div>
-`
-
-      // Get the button container and add buttons
-      const buttonContainer = document.getElementById("dialogButtons")
-
-      // Create provided buttons
-      options.actions.forEach((button) => {
-        const btn = document.createElement("button")
-        btn.textContent = button.text
-        btn.className = "md-raised md-button md-ink-ripple " + button.class
-
-        // Attach event listener to the button
-        btn.onclick = () => {
-          if (!options.enableDontShowAgain) {
-            // Handle API Key Dialog specific logic
-            const apiKeyInput = document.getElementById(
-              "apiKeyInput"
-            ) as HTMLInputElement
-            const apiKey = apiKeyInput.value.trim()
-            if (apiKey) {
-              localStorage.setItem("KRIIT_API_KEY", apiKey)
-            }
-          } else {
-            // Handle standard dialog logic
-            const dontAskAgainCheckbox = document.getElementById(
-              "dontAskAgain"
-            ) as HTMLInputElement
-            button.onClick(dontAskAgainCheckbox?.checked)
+        if (typeof options === "object" && options !== null) {
+          if (!options.content) {
+            options.content = options.title;
           }
-
-          // Invoke the button's onClick handler
-          button.onClick()
-
-          // Resolve the promise once a button is clicked
-          resolve()
-          dialog.style.display = "none" // Hide the dialog
+        } else {
+          throw new TypeError("Options must be an object");
         }
 
-        buttonContainer.appendChild(btn)
-      })
+        // Attempt to get an item from storage that matches the dialog name
+        const previousChoice = await TahvelJournal.getFromStorage(options.title); // Now this is allowed
+        if (previousChoice) {
+          const previousAction = options.actions.find(
+              (action) => action.text === previousChoice
+          );
+          if (previousAction) {
+            previousAction.onClick();
+            return;
+          }
+        }
 
-      dialog.style.display = "block"
-    })
+        // Set the dialog's content
+        dialog.innerHTML = `
+        <div class="dialog-title">
+          ${options.title}
+        </div>
+        <p>${options.content}</p>
+        <div>
+          ${
+            options.enableDontShowAgain
+                ? `
+            <input type="checkbox" id="dontAskAgain">
+            <label for="dontAskAgain">Ära küsi enam</label>
+          `
+                : ""
+        }
+        </div>
+        <div class="button-container" id="dialogButtons"></div>
+      `;
+        const buttonContainer = document.getElementById("dialogButtons");
+
+        options.actions.forEach((button) => {
+          const btn = document.createElement("button");
+          btn.textContent = button.text;
+          btn.className = "md-raised md-button md-ink-ripple " + button.class;
+
+          // Attach event listener to the button
+          btn.onclick = async () => {  // Make the onclick handler async
+            if (!options.enableDontShowAgain) {
+              // Handle API Key Dialog specific logic
+              const apiKeyInput = document.getElementById(
+                  "apiKeyInput"
+              ) as HTMLInputElement;
+              const apiKey = apiKeyInput.value.trim();
+              if (apiKey) {
+                await TahvelJournal.setInStorage("KRIIT_API_KEY", apiKey);
+              }
+            } else {
+              // Handle standard dialog logic
+              const dontAskAgainCheckbox = document.getElementById(
+                  "dontAskAgain"
+              ) as HTMLInputElement;
+              button.onClick(dontAskAgainCheckbox?.checked);
+            }
+
+            resolve();
+            dialog.style.display = "none";
+          };
+
+          buttonContainer.appendChild(btn);
+        });
+
+        dialog.style.display = "block";
+      };
+
+      // Call the async function
+      handleDialog().catch((error) => {
+        console.error("Error in showDialog:", error);
+      });
+    });
   }
 
   static hideDialog() {
@@ -468,7 +470,7 @@ class TahvelJournal {
       const outcomeResults = []
 
       const confirmExistingGradesUpdate =
-        localStorage.getItem("confirmExistingGradesUpdate") == "true"
+          await TahvelJournal.getFromStorage("confirmExistingGradesUpdate") == "true"
 
       // Loop through each student and calculate/update the grades
       for (const student of journal.students) {
@@ -800,7 +802,6 @@ class TahvelJournal {
     }
 
     saveButton.addEventListener("click", () => {
-      console.log("saveButton clicked")
       TahvelJournal.handleSaveButtonClick(discrepancy)
       window.location.reload()
     })
@@ -1314,7 +1315,7 @@ class TahvelJournal {
       )
 
       // Step 3: Iterate through each student in journal.students
-      journal.students.forEach((student) => {
+      journal.students.forEach( async (student) => {
         const studentRow = TahvelJournal.findTableRowById(student.studentId)
 
         if (!studentRow) {
@@ -1387,7 +1388,7 @@ class TahvelJournal {
         if (canAssignGrade) {
           // Determine the grading type to use; default to journal.gradingType if result is undefined
           const gradingTypeToUse =
-            localStorage.getItem("selectedGradingType") || journal.gradingType
+              await TahvelJournal.getFromStorage("selectedGradingType") || journal.gradingType
           const calculatedGrade = TahvelJournal.calculateGrade(
             gradingTypeToUse,
             studentGrades
@@ -1460,7 +1461,6 @@ class TahvelJournal {
   }
 
   private static colorMissingIndependentWorkCells(journal) {
-    console.log(journal)
     // Select all headers within the journal table that match the criteria
     const headers = Array.from(
       document.querySelectorAll(".journalTable th")
@@ -1656,7 +1656,7 @@ class TahvelJournal {
     const addEntityButton = document.querySelector(
       'button[ng-click="addNewEntry()"]'
     )
-    console.log("Add New Entity Button:", addEntityButton)
+
     if (addEntityButton) {
       addEntityButton.addEventListener("click", async () => {
         await TahvelJournal.addEventListenersToSaveEntryButton()
@@ -1666,44 +1666,42 @@ class TahvelJournal {
 
   static async addEventListenersToSaveEntryButton() {
     const saveEntryButton = document.querySelector(
-      'button[ng-click="saveEntry()"]'
-    )
+        'button[ng-click="saveEntry()"]'
+    );
+    console.log("Save Entry Button:", saveEntryButton);
 
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     const datePickerInput = document.querySelector(
-      "div > div.flex > div:nth-child(7) > md-input-container._md-datepicker-floating-label._md-datepicker-has-calendar-icon.flex-offset-5.flex > md-datepicker > div > input"
-    ) as HTMLInputElement
+        "div > div.flex > div:nth-child(7) > md-input-container._md-datepicker-floating-label._md-datepicker-has-calendar-icon.flex-offset-5.flex > md-datepicker > div > input"
+    ) as HTMLInputElement;
     const textareaElement = document.querySelector(
-      'textarea[ng-model="journalEntry.content"]'
-    ) as HTMLInputElement
+        'textarea[ng-model="journalEntry.content"]'
+    ) as HTMLInputElement;
 
     if (saveEntryButton) {
       saveEntryButton.addEventListener("click", async () => {
-        const journal = await TahvelJournal.getJournalWithValidation()
+        const journal = await TahvelJournal.getJournalWithValidation();
 
-        let assignmentDueAt = datePickerInput.value
-        if (assignmentDueAt) {
-          const [day, month, year] = assignmentDueAt.split(".")
-          assignmentDueAt = `${year}-${month}-${day}`
-        } // Now TypeScript recognizes 'value' as a valid property
-        const textContent = textareaElement.value // Get the text content from the textarea
-        console.log(textContent) // Output the extracted text to the console
+        const assignmentDueAt = datePickerInput.value;
+        const textContent = textareaElement.value; // Get the text content from the textarea
 
-        const addAssignmentToKriitDontAskAgain = localStorage.getItem(
-          "addAssignmentToKriitDontAskAgain"
-        )
-        const confirmAddingAssignmentToKriit = localStorage.getItem(
-          "confirmAddingAssignmentToKriit"
-        )
 
-        const KRIIT_API_KEY = localStorage.getItem("KRIIT_API_KEY")
-        console.log('KRIIT_API_KEY', KRIIT_API_KEY)
+        const addAssignmentToKriitDontAskAgain = await TahvelJournal.getFromStorage(
+            "addAssignmentToKriitDontAskAgain"
+        );
+        const confirmAddingAssignmentToKriit = await TahvelJournal.getFromStorage(
+            "confirmAddingAssignmentToKriit"
+        );
+
+        // Use messaging to retrieve the KRIIT_API_KEY from background
+        const KRIIT_API_KEY = await browser.runtime.sendMessage({ command: 'getApiKey' });
+        console.log(KRIIT_API_KEY);
         if (
-          addAssignmentToKriitDontAskAgain == null ||
-          confirmAddingAssignmentToKriit == null
+            addAssignmentToKriitDontAskAgain == null ||
+            confirmAddingAssignmentToKriit == null
         ) {
 
-          const title = "Kas lisada see ülesanne Kriiti?"
+          const title = "Kas lisada see ülesanne Kriiti?";
           await TahvelJournal.showDialog({
             title: title,
             actions: [
@@ -1712,97 +1710,77 @@ class TahvelJournal {
                 class: "md-primary",
                 onClick: async (dontAskAgain: boolean) => {
                   if (dontAskAgain) {
-                    localStorage.setItem(title, "Jah")
+                    await TahvelJournal.setInStorage(title, "Jah");
                   }
 
-                  localStorage.setItem("confirmAddingAssignmentToKriit", "true")
+                  await TahvelJournal.setInStorage("confirmAddingAssignmentToKriit", "true");
                   if (KRIIT_API_KEY == null || !KRIIT_API_KEY) {
-                    alert("Palun sisestage oma API key")
-                    await TahvelJournal.showDialog({
-                      title: "Palun sisestage oma API key:",
-                      content: `<input type="text" id="apiKeyInput" style="width: 100%; padding: 8px; margin-bottom: 10px;">`,
-                      actions: [
-                        {
-                          text: "Salvesta",
-                          class: "md-primary",
-                          onClick: () => {
-                            const apiKeyInput = document.getElementById(
-                              "apiKeyInput"
-                            ) as HTMLInputElement
-                            const apiKey = apiKeyInput.value.trim()
-                            if (apiKey) {
-                              localStorage.setItem("KRIIT_API_KEY", apiKey)
-                            }
-                            TahvelJournal.hideDialog()
-                          }
-                        },
-                        {
-                          text: "Tühista",
-                          class: "md-accent",
-                          onClick: () => {
-                            TahvelJournal.hideDialog()
-                          }
-                        }
-                      ],
-                      enableDontShowAgain: false
-                    })
+                    alert("Palun sisestage oma kriit.eu API key lainduse pop-up aknas");
                   }
-                  TahvelJournal.hideDialog()
+                  TahvelJournal.hideDialog();
                 }
               },
+
               {
                 text: "Ei",
                 class: "md-accent",
-                onClick: (dontAskAgain) => {
+                onClick: async (dontAskAgain) => {
                   if (dontAskAgain) {
-                    localStorage.setItem(title, "Ei")
+                    await TahvelJournal.setInStorage(title, "Ei");
                   }
-                  localStorage.setItem(
-                    "confirmAddingAssignmentToKriit",
-                    "false"
-                  )
-                  TahvelJournal.hideDialog()
+                  await TahvelJournal.setInStorage(
+                      "confirmAddingAssignmentToKriit",
+                      "false"
+                  );
+                  TahvelJournal.hideDialog();
                 }
               }
             ],
             enableDontShowAgain: true
-          })
+          });
         }
 
-        const addingAssignmentToKriit =
-          localStorage.getItem("confirmAddingAssignmentToKriit") === "true"
 
-        await new Promise((resolve) => setTimeout(resolve, 3000))
+        const addingAssignmentToKriit =
+            await TahvelJournal.getFromStorage("confirmAddingAssignmentToKriit") === "true";
+
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+
 
         // Find the journal entry ID from the journal object if nameEt contains the textContent
         const journalEntry = journal.entriesInJournal.find((entry) =>
           entry.name.includes(textContent)
         )
 
+        let formattedAssignmentDueAt = null;
+        if (assignmentDueAt) {
+          const [day, month, year] = assignmentDueAt.split(".");
+          formattedAssignmentDueAt = `${year}-${month}-${day}`;
+        }
+
         const data = {
-          assignmentDueAt: assignmentDueAt,
+          assignmentDueAt: formattedAssignmentDueAt,
           tahvelSubjectId: journal.id,
           subjectName: journal.name,
           groupName: journal.studentGroups[0],
           tahvelJournalEntryId: journalEntry.id,
           assignmentInstructions: textContent
-        }
+        };
 
-        if (addingAssignmentToKriit) {
+        if (addingAssignmentToKriit && KRIIT_API_KEY) {
           const response = await AssistentApiClient.request(
-            "POST",
-            `${AssistentApiClient.kriitUrl}/api/assignments/add`,
-            data
-          )
-          console.log(response)
+              "POST",
+              `${AssistentApiClient.kriitUrl}/api/assignments/add`,
+              data
+          );
           const res = await TahvelJournal.insertKriitLinkinHomework(
-            journal.id,
-            response.data,
-            journalEntry.id
-          )
-          console.log(res)
+              journal.id,
+              response.data,
+              journalEntry.id
+          );
+          console.log(res);
         }
-      })
+      });
     }
   }
 
@@ -1826,6 +1804,44 @@ class TahvelJournal {
       newEntry
     )
   }
+
+  static async getFromStorage(key: string): Promise<string | null> {
+    try {
+      const response :string = await browser.runtime.sendMessage({
+        command: 'getFromStorage',
+        key: key
+      });
+      return response ? response : null;
+    } catch (error) {
+      console.error(`Error retrieving ${key} from storage:`, error);
+      return null;
+    }
+  }
+
+  static async setInStorage(key: string, value: string): Promise<void> {
+    try {
+      await browser.runtime.sendMessage({
+        command: 'setInStorage',
+        key: key,
+        value: value
+      });
+    } catch (error) {
+      console.error(`Error setting ${key} in storage:`, error);
+    }
+  }
+
+  static async removeFromStorage(key: string): Promise<void> {
+    try {
+      await browser.runtime.sendMessage({
+        command: 'removeFromStorage',
+        key: key
+      });
+    } catch (error) {
+      console.error(`Error removing ${key} from storage:`, error);
+    }
+  }
+
 }
+
 
 export default TahvelJournal

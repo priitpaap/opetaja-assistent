@@ -1,20 +1,19 @@
 import TahvelJournal from "~src/modules/tahvel/TahvelJournal";
 import { AssistentApiError } from "~src/shared/AssistentApiError"
-
+import browser from 'webextension-polyfill';
 
 
 class AssistentApiClient {
 
     static url: string = AssistentApiClient.extractBaseUrl();
     // static kriitUrl: string = 'https://kriit.eu';
-    static kriitUrl: string = 'https://sisseastumine.dvl.to';
+    static kriitUrl: string = 'https://kriit.eu.dvl.to';
 
     static extractBaseUrl(): string {
         const url = window.location.href;
         const hashIndex = url.indexOf('#');
         return url.substring(0, hashIndex !== -1 ? hashIndex : undefined);
     }
-
 
     // eslint-disable-next-line
     static async get(endpoint: string): Promise<any> {
@@ -42,9 +41,14 @@ class AssistentApiClient {
         return AssistentApiClient.request('POST', endpoint, body, headers);
     }
 
-    // eslint-disable-next-line
-    static async request(method: string, endpoint: string, body: object | null = null, customHeaders: object | null = null): Promise<any> {
 
+    static async request(
+        method: string,
+        endpoint: string,
+        body: object | null = null,
+        customHeaders: object | null = null
+        // eslint-disable-next-line
+    ): Promise<any> {
 
         const headers = new Headers({
             'Accept': 'application/json',
@@ -52,10 +56,9 @@ class AssistentApiClient {
             ...customHeaders
         });
 
-
-        //If endpoint has kriit.eu in it, add Authorization header
+        // Check if the endpoint is for kriit.eu and fetch the API key from the background script
         if (endpoint.includes(AssistentApiClient.kriitUrl)) {
-            const apiKey = localStorage.getItem('KRIIT_API_KEY');
+            const apiKey = await browser.runtime.sendMessage({ command: 'getApiKey' });
             if (!apiKey) {
                 throw new Error('KRIIT_API_KEY not found');
             }
