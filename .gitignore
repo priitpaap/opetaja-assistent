@@ -44,3 +44,4 @@ keys.json
 # IDEs
 /.idea
 /.vscode
+/build
