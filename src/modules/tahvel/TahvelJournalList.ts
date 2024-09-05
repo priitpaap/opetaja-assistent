@@ -17,6 +17,11 @@ class TahvelJournalList {
 
             const journal = AssistentCache.getJournal(journalId);
 
+            // If journal does not exist in cache, skip processing.
+            if (!journal) {
+                return;
+            }
+
             const wrapper = document.createElement('span');
             wrapper.style.display = 'flex';
             wrapper.id = 'InjectionsWrapper';
