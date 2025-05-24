@@ -5,7 +5,6 @@ export interface apiTimetableEntry {
   date: string
   timeStart: string
   timeEnd: string
-  lessonType: string
 }
 
 export interface apiJournalEntry {

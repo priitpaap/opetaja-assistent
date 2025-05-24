@@ -5,7 +5,6 @@ import AssistentCache from "~src/shared/AssistentCache";
 import type {apiTimetableEntry} from "~src/modules/tahvel/TahvelTypes";
 import TahvelUser from "~src/modules/tahvel/TahvelUser";
 import {AssistentDetailedError} from "~src/shared/AssistentDetailedError";
-import {LessonType} from "~src/shared/AssistentTypes";
 
 class TahvelTimetable {
 
@@ -26,8 +25,7 @@ class TahvelTimetable {
                     timeStart: event.timeStart,
                     timeEnd: event.timeEnd,
                     firstLessonStartNumber: TahvelTimetable.calculateLessonNumber(event),
-                    journalId: event.journalId,
-                    lessonType: event.lessonType === "PRAKTILINE_T" ? LessonType.practicalWork : LessonType.lesson
+                    journalId: event.journalId
                 });
             }
             return acc;

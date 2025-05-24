@@ -1026,34 +1026,36 @@ class TahvelJournal {
       discrepancy: AssistentJournalDifference
   ) {
     const isLessonsInDiaryButNotInTimetable =
-        discrepancy.journalLessonCount > 0 && discrepancy.timetableLessonCount === 0
+        discrepancy.journalLessonCount > 0 &&
+        discrepancy.timetableLessonCount === 0
     const isLessonsInTimetableButNotInDiary =
-        discrepancy.journalLessonCount === 0 && discrepancy.timetableLessonCount > 0
+        discrepancy.timetableLessonCount > 0 &&
+        discrepancy.journalLessonCount === 0
+    const journalEntryElement: HTMLElement =
+        await TahvelJournal.findJournalEntryElement(discrepancy)
 
     const action = {
       color: "",
       text: "",
-      elementOrSelector: null as HTMLElement | null,
-      callback: null as (() => Promise<void>) | null
+      elementOrSelector: journalEntryElement,
+      callback: async () => {
+      }
     }
 
+    let deleteButton
     if (isLessonsInDiaryButNotInTimetable) {
       action.color = "md-warn"
-      action.text = "Kustuta sissekanne"
-      action.elementOrSelector = await TahvelJournal.findJournalEntryElement(
-          discrepancy
-      )
-
-      if (!action.elementOrSelector) {
-        throw new AssistentDetailedError(
-            500,
-            "Element not found",
-            "Journal entry element not found."
-        )
-      }
-
+      action.text = "Vaata sissekannet"
       action.callback = async () => {
-        await TahvelJournal.deleteJournalEntry(discrepancy)
+        const style = TahvelDom.createBlinkStyle()
+        document.head.append(style)
+        deleteButton = (await AssistentDom.waitForElement(
+            'button[ng-click="delete()"]'
+        )) as HTMLElement
+        if (deleteButton) {
+          deleteButton.classList.add("blink")
+        }
+        TahvelJournal.handleSaveButtonClick(discrepancy)
       }
     } else if (isLessonsInTimetableButNotInDiary) {
       action.color = "md-primary"
@@ -1071,21 +1073,9 @@ class TahvelJournal {
       }
 
       action.callback = async () => {
-        // Check if the timetable entry is a practical work
-        const journal = AssistentCache.getJournal(discrepancy.journalEntryId)
-        const timetableEntry = journal?.entriesInTimetable.find(
-            entry => entry.date === discrepancy.date
-        )
-
-        if (timetableEntry?.lessonType === LessonType.practicalWork) {
-          await TahvelJournal.setJournalEntryTypeAsPracticalWork()
-          await TahvelJournal.setJournalEntryDate(discrepancy)
-          await TahvelJournal.setJournalEntryTypeAsPracticalLesson()
-        } else {
-          await TahvelJournal.setJournalEntryTypeAsLesson()
-          await TahvelJournal.setJournalEntryDate(discrepancy)
-          await TahvelJournal.setJournalEntryTypeAsContactLesson()
-        }
+        await TahvelJournal.setJournalEntryTypeAsLesson()
+        await TahvelJournal.setJournalEntryDate(discrepancy)
+        await TahvelJournal.setJournalEntryTypeAsContactLesson()
         await TahvelJournal.setJournalEntryStartLessonNr(discrepancy)
         await TahvelJournal.setJournalEntryCountOfLessons(discrepancy)
       }
@@ -1517,38 +1507,6 @@ class TahvelJournal {
         }
       }
     });
-  }
-
-  static async setJournalEntryTypeAsPracticalWork(): Promise<void> {
-    await TahvelDom.selectDropdownOption(
-        "journalEntry.entryType",
-        "SISSEKANNE_P"
-    )
-  }
-
-  static async setJournalEntryTypeAsPracticalLesson(): Promise<void> {
-    // Find the checkbox with the specified aria-label
-    const checkbox = (await AssistentDom.waitForElement(
-        'md-checkbox[aria-label="Praktiline töö"]'
-    )) as HTMLElement
-
-    if (!checkbox) {
-      throw new AssistentDetailedError(
-          500,
-          "Element not found",
-          "Checkbox element not found."
-      )
-    }
-
-    // Simulate a click on the checkbox
-    checkbox.click()
-
-    // Make checkbox border 2px green
-    checkbox.style.border = "2px solid #40ff6d"
-  }
-
-  static async deleteJournalEntry(discrepancy: AssistentJournalDifference) {
-    // Implementation of deleteJournalEntry method
   }
 }
 
