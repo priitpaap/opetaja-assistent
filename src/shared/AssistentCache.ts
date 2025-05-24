@@ -30,7 +30,7 @@ export class AssistentCache {
 
     for (const journalEntry of journal.entriesInJournal) {
       if (journalEntry.lessonType !== LessonType.lesson && journalEntry.lessonType !== LessonType.practicalWork) {
-        continue // Skip entries with lessonType other than lesson or practical work
+        continue // Jätame vahele kõik muud tüüpi sissekanded
       }
       if (!firstLessonStartNumbers[journalEntry.date]) {
         firstLessonStartNumbers[journalEntry.date] = {
@@ -119,36 +119,38 @@ export class AssistentCache {
     const journal = AssistentCache.getJournal(journalId)
     const missingGrades: AssistentStudentsWithoutGrades[] = []
 
-        if (!journal) return;
+    if (!journal) return;
 
     // If contact lessons count in timetable are equal or greater than contact lessons planned, then add data into cache
     if (journal.entriesInTimetable.length >= journal.contactLessonsPlanned) {
-      // iterate over curriculumModules and find the discrepancies of studentOutcomeResults and students
-      for (const curriculumModule of journal.learningOutcomes) {
-        const missingGradesForModule: AssistentStudentsWithoutGrades = {
-          curriculumModuleOutcomes: curriculumModule.curriculumModuleOutcomes,
-          name: curriculumModule.name,
-          code: curriculumModule.code,
-          studentList: []
-        }
+      // Kontrollime iga õpilase lõpptulemust
+      for (const student of journal.students) {
+        // Kontrollime, kas õpilasel on lõpptulemus
+        const hasFinalGrade = journal.entriesInJournal.some((entry) =>
+          entry.journalStudentResults.some(
+            (result) =>
+              result.studentId === student.id &&
+              result.gradeCode && // Kontrollime, kas on olemas hinde
+              entry.name === "Lõpptulemus" // Kontrollime, kas on lõpptulemus
+          )
+        );
 
-        for (const student of journal.students) {
-          // Check if student's status is active before calculating missing grades
-          if (
-            student.status === AssistentStudentStatus.active &&
-            !curriculumModule.studentOutcomeResults.find(
-              (result) => result.studentId === student.studentId
-            )
-          ) {
-            missingGradesForModule.studentList.push(student)
-          }
-        }
-
-        if (missingGradesForModule.studentList.length > 0) {
-          missingGrades.push(missingGradesForModule)
+        // Kui õpilasel pole lõpptulemust ja ta on aktiivne õpilane
+        if (
+          student.status === AssistentStudentStatus.active &&
+          !hasFinalGrade
+        ) {
+          // Lisame õpilase puuduvate hindade nimekirja
+          const missingGradesForStudent: AssistentStudentsWithoutGrades = {
+            curriculumModuleOutcomes: 0, // Lisame tühja õpiväljundi ID
+            name: "Lõpptulemus",
+            code: "LÕPP",
+            studentList: [student]
+          };
+          missingGrades.push(missingGradesForStudent);
         }
       }
-      journal.missingGrades = missingGrades
+      journal.missingGrades = missingGrades;
     }
   }
 
