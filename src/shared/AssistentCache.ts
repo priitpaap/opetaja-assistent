@@ -29,8 +29,8 @@ export class AssistentCache {
     const differences: AssistentJournalDifference[] = []
 
     for (const journalEntry of journal.entriesInJournal) {
-      if (journalEntry.lessonType !== LessonType.lesson) {
-        continue // Skip entries with lessonType other than lesson
+      if (journalEntry.lessonType !== LessonType.lesson && journalEntry.lessonType !== LessonType.practicalWork) {
+        continue // Skip entries with lessonType other than lesson or practical work
       }
       if (!firstLessonStartNumbers[journalEntry.date]) {
         firstLessonStartNumbers[journalEntry.date] = {
@@ -88,10 +88,10 @@ export class AssistentCache {
             firstLessonStartNumbers[date].timetable,
           journalLessonCount: lessonCounts[date].journal,
           journalFirstLessonStartNumber: firstLessonStartNumbers[date].journal,
-          // Find the journal entry id for the date and where lessonType is lesson
+          // Find the journal entry id for the date and where lessonType is lesson or practical work
           journalEntryId:
             journal.entriesInJournal.find(
-              (j) => j.date === date && j.lessonType === LessonType.lesson
+              (j) => j.date === date && (j.lessonType === LessonType.lesson || j.lessonType === LessonType.practicalWork)
             )?.id || 0
         })
       }

@@ -66,6 +66,7 @@ export interface AssistentTimetableEntry {
   timeEnd: string
   firstLessonStartNumber: number
   journalId: number
+  lessonType: LessonType
 }
 
 export interface AssistentJournalEntry {

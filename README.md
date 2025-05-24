@@ -1,7 +1,5 @@
 # Õpetaja assistent
 
-Pivotal Tracker: [https://www.pivotaltracker.com/n/projects/2645015](https://www.pivotaltracker.com/n/projects/2645015)
-
 ## Eesmärk
 
 „Õpetaja assistent“ on Chrome'i laiendus, mis on loodud selleks, et aidata õpetajatel õppeinfosüsteemis rühmade
@@ -10,7 +8,7 @@ kõrvaldada. Laiendus tuvastab ja tõstab esile puuduolevad tunnid ja hinded, an
 staatusest ja paljust muust. See on mõeldud olema tõhus vahend õpetajatele, muutes nende töö lihtsamaks ja
 korraldatumaks.
 
-Hetkel on toetatud tahvel.edu.ee, kuid Siseveebi tugi on ka plaanis luua kunagi, kui keegi soovib seda.
+Hetkel on toetatud tahvel.edu.ee.
 
 ## Paigaldamine
 
