@@ -28,9 +28,10 @@
     "@types/chrome": "^0.0.237",
     "@types/node": "^20.12.5",
     "@typescript-eslint/eslint-plugin": "^7.11.0",
+    "@typescript-eslint/parser": "^8.32.1",
     "eslint": "^9.1.1",
     "globals": "^15.1.0",
-    "plasmo": "^0.86.3",
+    "plasmo": "^0.90.5",
     "prettier": "^2.8.8",
     "typescript": "^5.4.4",
     "typescript-eslint": "^7.7.1"
@@ -46,6 +47,15 @@
       "allowedVersions": {
         "svgo": "2.8.0"
       }
-    }
+    },
+    "onlyBuiltDependencies": [
+      "@parcel/watcher",
+      "@swc/core",
+      "esbuild",
+      "lmdb",
+      "msgpackr-extract",
+      "sharp",
+      "svelte-preprocess"
+    ]
   }
 }
