@@ -22,6 +22,41 @@ import {
   type apiStudentOutcomeEntry
 } from "./TahvelTypes"
 
+// Define Angular types
+interface IAngularScope {
+  $apply: (fn: () => void) => void;
+  $parent?: IAngularScope;
+  selectedCapacityTypes: Record<string, boolean>;
+  type: {
+    code: string;
+  };
+  journalEntry?: {
+    entryType: string;
+  };
+  typeCode?: string;
+  journalEntryTypes?: {
+    [key: string]: {
+      _selected: boolean;
+    };
+  };
+  updateSelectedEntryTypes?: () => void;
+}
+
+interface IAngularElement {
+  scope: () => IAngularScope;
+}
+
+interface IAngular {
+  element: (element: HTMLElement) => IAngularElement;
+}
+
+// Add window.angular type declaration
+declare global {
+  interface Window {
+    angular: IAngular;
+  }
+}
+
 class TahvelJournal {
   //eslint-disable-next-line
   static async findJournalEntryElement(discrepancy: any
@@ -780,24 +815,75 @@ class TahvelJournal {
 
   // Function to preselect the journal entry capacity types
   static async setJournalEntryTypeAsContactLesson(): Promise<void> {
-    // Find the checkbox with the specified aria-label
-    const checkbox = (await AssistentDom.waitForElement(
+    // Try to find and click "Auditoorne õpe" checkbox first
+    const auditoorneCheckbox = document.querySelector(
         'md-checkbox[aria-label="Auditoorne õpe"]'
-    )) as HTMLElement
+    ) as HTMLElement
 
-    if (!checkbox) {
+    if (auditoorneCheckbox) {
+      console.log("Found Auditoorne õpe checkbox")
+      // If "Auditoorne õpe" exists, click it and make border green
+      const clickEvent = new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+        view: window
+      })
+      auditoorneCheckbox.dispatchEvent(clickEvent)
+      auditoorneCheckbox.style.border = "2px solid #40ff6d"
+      return
+    }
+
+    // If "Auditoorne õpe" not found, try "Praktiline töö"
+    const praktilineCheckbox = document.querySelector(
+      'md-checkbox[aria-label="Praktiline töö"]'
+    ) as HTMLElement
+
+    if (praktilineCheckbox) {
+      console.log("Found Praktiline töö checkbox")
+      
+      // Find the select element that controls the entry type
+      const selectElement = document.querySelector('select[ng-model="journalEntry.entryType"]') as HTMLSelectElement
+      if (selectElement) {
+        console.log("Found select element")
+        
+        // Set the value to SISSEKANNE_P
+        selectElement.value = 'SISSEKANNE_P'
+        
+        // Trigger change event
+        const changeEvent = new Event('change', { bubbles: true })
+        selectElement.dispatchEvent(changeEvent)
+        
+        // Try to update Angular model
+        if (window.angular) {
+          try {
+            const scope = window.angular.element(selectElement).scope()
+            if (scope) {
+              scope.$apply(() => {
+                scope.journalEntry.entryType = 'SISSEKANNE_P'
+              })
+            }
+          } catch (error) {
+            console.log("Error updating Angular model:", error)
+          }
+        }
+      }
+
+      // Add the classes that Angular Material adds when checked
+      praktilineCheckbox.classList.add('md-checked', 'ng-dirty', 'ng-valid-parse', 'ng-not-empty', 'ng-touched')
+      praktilineCheckbox.setAttribute('aria-checked', 'true')
+      
+      // Add green border
+      praktilineCheckbox.style.border = "2px solid #40ff6d"
+      
+      return
+    }
+
+    // If neither checkbox is found, throw an error
       throw new AssistentDetailedError(
           500,
           "Element not found",
-          "Checkbox element not found."
+      "Neither 'Auditoorne õpe' nor 'Praktiline töö' checkbox found."
       )
-    }
-
-    // Simulate a click on the checkbox
-    checkbox.click()
-
-    // Make checkbox border 2px green
-    checkbox.style.border = "2px solid #40ff6d"
   }
 
   static async setJournalEntryTypeAsLesson(): Promise<void> {
